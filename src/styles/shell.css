@@ -1,0 +1,446 @@
+/* ==========================================================================
+   App shell — sidebar rail, brand + version card, nav, user card and the
+   corner connection indicator. Geometry and timing are taken from demo.html.
+   ========================================================================== */
+
+/* Registered so the rail logo size can transition (it drives layout). */
+@property --rail-logo-size {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 42px;
+}
+
+@layer components {
+    /* ---------------- Rail (64px ↔ 268px, overlays the content) ---------------- */
+    .rail {
+        position: fixed;
+        inset-block: 0;
+        left: 0;
+        z-index: 40;
+        width: 64px;
+        background-color: var(--sidebar);
+        box-shadow: inset -1px 0 0 var(--border);
+        will-change: width;
+        transition:
+            width 380ms var(--ease-damped-collapse),
+            box-shadow 300ms var(--ease-damped-collapse);
+    }
+    .rail[data-expanded="true"] {
+        width: 268px;
+        box-shadow: inset -1px 0 0 var(--border), var(--elev-rail);
+        transition:
+            width 460ms var(--ease-damped-expand),
+            box-shadow 460ms var(--ease-damped-expand);
+    }
+
+    /* Forgiving edge so a slightly overshooting pointer does not collapse it. */
+    .rail-hitbox {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: -24px;
+        width: 24px;
+    }
+    /* The demo widens this to 44px when expanded. Here the expanded rail
+       floats over content, so a wider strip would block real controls; the
+       180ms leave delay provides the forgiveness instead. */
+    .rail[data-expanded="true"] .rail-hitbox {
+        display: none;
+    }
+    @media (hover: none) {
+        .rail-hitbox {
+            display: none;
+        }
+    }
+
+    .rail-content {
+        position: relative;
+        display: flex;
+        height: 100%;
+        width: 100%;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* Text fades in after the width starts moving; leaves first on collapse. */
+    .fade-item {
+        opacity: 0;
+        translate: -6px 0;
+        white-space: nowrap;
+        pointer-events: none;
+        transition:
+            opacity 160ms var(--ease-damped-collapse),
+            translate 240ms var(--ease-damped-collapse);
+    }
+    [data-expanded="true"] .fade-item {
+        opacity: 1;
+        translate: 0 0;
+        pointer-events: auto;
+        transition:
+            opacity 320ms var(--ease-damped-expand) 35ms,
+            translate 420ms var(--ease-damped-expand) 25ms;
+    }
+
+    /* ---------------- Brand + version card ---------------- */
+    .rail-brand {
+        position: relative;
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 12px;
+        /* 13 + 42 + 13 = 68px at rest. The logo is anchored top-left, so when
+           Blip wakes it grows right and down, pushing the name and the nav. */
+        padding: 13px 11px;
+        --rail-logo-size: 42px;
+        /* Leaving: slow settle back (matches blip.css --blip-settle). */
+        transition: --rail-logo-size 650ms cubic-bezier(0.45, 0, 0.25, 1);
+    }
+    /* Only when expanded: the collapsed 64px rail clips overflow, so there
+       Blip falls back to scaling in place (blip.css). */
+    [data-expanded="true"] .rail-brand:has(.blip[data-active="true"]) {
+        --rail-logo-size: 76px;
+        /* Waking: quick spring pop. */
+        transition: --rail-logo-size 340ms var(--ease-spring-pop);
+    }
+    /* Expanded: the rail logo grows by layout, not by scaling the artwork. */
+    [data-expanded="true"] .rail-logo .blip[data-active="true"] {
+        transform: none;
+    }
+
+    /* 42px logo: outer R13 = inner r9 + gap 4. */
+    .rail-logo {
+        position: relative;
+        z-index: 3;
+        display: flex;
+        width: var(--rail-logo-size);
+        height: var(--rail-logo-size);
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: calc(var(--rail-logo-size) * 13 / 42);
+        outline: none;
+        transition: transform 280ms var(--ease-spring-pop);
+    }
+    .rail-logo:active {
+        transform: scale(0.95);
+    }
+    .rail-logo:focus-visible {
+        box-shadow: 0 0 0 2px var(--sidebar), 0 0 0 4px var(--ring);
+    }
+
+    .rail-brand-name {
+        position: relative;
+        z-index: 1;
+        font-size: 16px;
+        line-height: 1.5;
+        font-weight: var(--fw-semibold);
+        letter-spacing: 0.4px;
+    }
+    /* ---------------- Navigation + sliding indicator ---------------- */
+    .rail-nav {
+        position: relative;
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 10px 18px;
+        list-style: none;
+    }
+    .rail-indicator {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        z-index: 0;
+        height: 44px;
+        pointer-events: none;
+        transform: translate3d(0, calc(var(--i, 0) * 52px), 0);
+        transition:
+            transform 440ms var(--ease-damped-expand),
+            opacity 200ms ease-out;
+        will-change: transform;
+    }
+    .rail-indicator[data-hidden="true"] {
+        opacity: 0;
+    }
+    .rail-indicator-pill {
+        height: 100%;
+        border-radius: 14px;
+        background-color: var(--nav-active);
+    }
+    .rail-indicator-pill[data-bounce="true"] {
+        animation: pill-confirm-bounce 360ms var(--ease-spring-pop);
+    }
+
+    .rail-item {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        width: 100%;
+        height: 44px;
+        align-items: center;
+        gap: 10px;
+        overflow: hidden;
+        padding: 6px;
+        border-radius: 14px;
+        color: var(--muted-foreground);
+        outline: none;
+        transition:
+            background-color 180ms ease-out,
+            color 180ms ease-out,
+            transform 140ms var(--ease-damped-collapse);
+    }
+    .rail-item:hover:not([aria-current="page"]) {
+        background-color: var(--nav-hover);
+        color: var(--foreground);
+    }
+    .rail-item:active {
+        transform: scale(0.95);
+    }
+    .rail-item[aria-current="page"] {
+        color: var(--foreground);
+    }
+    .rail-item:focus-visible {
+        box-shadow: inset 0 0 0 2px var(--ring);
+    }
+
+    .rail-icon {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: transform 240ms var(--ease-spring-pop);
+    }
+    .rail-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    .rail-item:hover:not([aria-current="page"]) .rail-icon {
+        transform: scale(1.07);
+    }
+    .rail-item[data-just-selected="true"] .rail-icon {
+        animation: icon-confirm-pop 400ms var(--ease-spring-pop);
+    }
+    .rail-label {
+        font-size: 14px;
+        line-height: 1.5;
+        font-weight: var(--fw-medium);
+        letter-spacing: 0.15px;
+    }
+    .rail-item[data-just-selected="true"] .rail-label {
+        animation: label-confirm-slide 360ms var(--ease-damped-expand);
+    }
+
+    /* ---------------- Footer user card ---------------- */
+    .rail-footer {
+        flex-shrink: 0;
+        padding: 12px 10px 16px;
+    }
+    .rail-user {
+        display: flex;
+        width: 100%;
+        min-height: 44px;
+        align-items: center;
+        gap: 11px;
+        overflow: hidden;
+        padding: 6px;
+        border-radius: 14px;
+        background-color: transparent;
+        text-align: left;
+        outline: none;
+        transition:
+            background-color 320ms var(--ease-damped-expand),
+            transform 150ms var(--ease-damped-collapse);
+    }
+    .rail-user:hover {
+        background-color: var(--nav-hover);
+    }
+    [data-expanded="true"] .rail-user {
+        background-color: var(--user-card);
+    }
+    [data-expanded="true"] .rail-user[data-popup-open] {
+        background-color: var(--user-card-hover);
+    }
+    .rail-user:active {
+        transform: scale(0.96);
+    }
+    .rail-user:focus-visible {
+        box-shadow: inset 0 0 0 2px var(--ring);
+    }
+    .rail-user [data-slot="avatar"] {
+        transition: transform 240ms var(--ease-spring-pop);
+    }
+    .rail-user:hover [data-slot="avatar"],
+    .rail-user[data-popup-open] [data-slot="avatar"] {
+        transform: scale(1.06);
+    }
+
+    /* Up-opening menu: R18 = item r12 + padding 6. */
+    .rail-menu [data-slot="dropdown-menu-item"] {
+        min-height: 40px;
+        gap: 11px;
+    }
+    .rail-menu [data-slot="dropdown-menu-item"] svg {
+        width: 17px;
+        height: 17px;
+    }
+
+    /* ---------------- Corner connection indicator ---------------- */
+    .status-zone {
+        position: fixed;
+        top: 0;
+        right: 0;
+        z-index: 45;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        outline: none;
+        --dot: var(--status-ok);
+        --dot-glow: var(--status-ok-glow);
+    }
+    .status-zone[data-state="error"] {
+        --dot: var(--status-err);
+        --dot-glow: var(--status-err-glow);
+    }
+    .status-zone[data-state="loading"] {
+        --dot: var(--status-idle);
+        --dot-glow: var(--status-idle-glow);
+    }
+    @media (pointer: coarse) {
+        .status-zone {
+            width: 44px;
+            height: 44px;
+        }
+    }
+
+    .status-dot {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+        background-color: var(--dot);
+        opacity: 0.72;
+        transition:
+            background-color 240ms ease-out,
+            transform 260ms var(--ease-spring-pop),
+            box-shadow 240ms ease-out,
+            opacity 200ms ease-out;
+    }
+    .status-zone[data-open="true"] .status-dot,
+    .status-zone:focus-visible .status-dot {
+        opacity: 1;
+        transform: scale(1.25);
+        box-shadow: 0 0 0 3px var(--dot-glow);
+    }
+    .status-zone:focus-visible .status-dot {
+        box-shadow: 0 0 0 3px var(--dot-glow), 0 0 0 5px var(--ring);
+    }
+
+    .status-card {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 44;
+        padding: 4px;
+        border-radius: 13px;
+        background-color: var(--popover);
+        box-shadow: var(--elev-corner);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform-origin: 100% 0%;
+        transform: translate3d(12px, -12px, 0) scale(0.84);
+        filter: blur(3px);
+        will-change: transform, opacity, filter;
+        transition:
+            opacity 200ms var(--ease-damped-collapse),
+            transform 260ms var(--ease-damped-collapse),
+            filter 200ms var(--ease-damped-collapse),
+            visibility 260ms;
+    }
+    .status-card::before {
+        content: "";
+        position: absolute;
+        inset: -16px -16px -8px -8px;
+        z-index: -1;
+    }
+    .status-zone[data-open="true"] .status-card {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: blur(0);
+        transition:
+            opacity 280ms var(--ease-damped-expand),
+            transform 400ms var(--ease-damped-expand),
+            filter 280ms var(--ease-damped-expand),
+            visibility 0ms;
+    }
+    .status-inner {
+        display: flex;
+        flex-direction: column;
+        padding: 0 12px;
+        border-radius: 9px;
+        background-color: var(--popover-inner);
+        white-space: nowrap;
+    }
+    .status-row {
+        display: flex;
+        height: 32px;
+        align-items: center;
+        gap: 8px;
+    }
+    /* Indented to line up with the status text (dot 6px + gap 8px). */
+    .status-versions {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        margin-left: 14px;
+        padding: 7px 0 9px;
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        line-height: 15px;
+        font-variant-numeric: tabular-nums;
+        text-align: left;
+    }
+    .status-version-key {
+        display: inline-block;
+        width: 18px;
+        color: var(--muted-foreground);
+    }
+    .status-version-value {
+        color: var(--foreground);
+        font-weight: var(--fw-medium);
+    }
+    .status-badge-dot {
+        width: 6px;
+        height: 6px;
+        flex-shrink: 0;
+        border-radius: 9999px;
+        background-color: var(--dot);
+        box-shadow: 0 0 0 2px var(--dot-glow);
+    }
+    .status-text {
+        font-size: 12px;
+        line-height: 1.5;
+        font-weight: var(--fw-medium);
+        letter-spacing: 0.2px;
+        color: var(--foreground);
+    }
+    .status-zone[data-state="error"] .status-text {
+        color: var(--destructive);
+    }
+}
+
+/* Circles stay round even where squircles are on. */
+@supports (corner-shape: squircle) {
+    .status-dot,
+    .status-badge-dot {
+        corner-shape: round;
+    }
+}

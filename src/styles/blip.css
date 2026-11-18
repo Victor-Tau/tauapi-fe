@@ -1,0 +1,234 @@
+/* ==========================================================================
+   Blip — animated mascot logo (components/blip-logo.tsx, design: blip.html).
+   Light palette = assets/logo-light.svg, dark palette = assets/logo-dark.svg.
+   Scale origins use transform-box: fill-box (the viewBox starts at 20,20,
+   so view-box px origins would be offset).
+   ========================================================================== */
+
+@layer components {
+    .blip {
+        --blip-plate: #e9e8e4;
+        --blip-ink: #1c1b18;
+        --blip-crease: #e9e8e4;
+        --blip-eye: #fcfcfb;
+        --blip-echo-1: #57544d;
+        --blip-echo-2: #858177;
+        --blip-echo-1-opacity: 0.5;
+        --blip-echo-2-opacity: 0.32;
+        --blip-cx: -5px;
+        --blip-cy: 4px;
+        display: block;
+        overflow: visible;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        --blip-settle: 650ms cubic-bezier(0.45, 0, 0.25, 1);
+        transform-origin: 50% 50%;
+        /* Leaving: slow, gentle settle back to rest. */
+        transition: transform var(--blip-settle);
+    }
+    .dark .blip {
+        --blip-plate: #222222;
+        --blip-ink: #f2f2f2;
+        --blip-crease: #222222;
+        --blip-eye: #141414;
+        --blip-echo-2: #c9ad7f;
+        --blip-echo-2-opacity: 0.38;
+        --blip-cx: -4px;
+        --blip-cy: 3px;
+    }
+    .blip[data-interactive="true"] {
+        cursor: pointer;
+    }
+    /* Static by default; wakes (enlarges + animates) after a 100ms hover
+       — data-active is set by blip-logo.tsx. */
+    .blip[data-active="true"] {
+        transform: scale(1.25);
+        /* Waking: quick spring pop. */
+        transition: transform 280ms var(--ease-spring-pop);
+    }
+
+    .blip g {
+        transform-box: fill-box;
+    }
+
+    .blip-plate {
+        fill: var(--blip-plate);
+    }
+    .blip-center {
+        transform: translate(var(--blip-cx), var(--blip-cy));
+    }
+    .blip-pop {
+        /* Squash from the feet. */
+        transform-origin: 50% 100%;
+    }
+
+    /* ---------------- Body ---------------- */
+    .blip-shape,
+    .blip-echo path {
+        stroke-width: 18;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+    }
+    .blip-shape {
+        fill: var(--blip-ink);
+        stroke: var(--blip-ink);
+    }
+    .blip-crease {
+        fill: none;
+        stroke: var(--blip-crease);
+        stroke-linecap: round;
+    }
+    .blip-crease-smile {
+        stroke-width: 4.5;
+    }
+    .dark .blip-crease-minor {
+        display: none;
+    }
+    .dark .blip-crease-smile {
+        stroke-width: 5;
+    }
+
+    /* ---------------- Eyes ---------------- */
+    .blip-eye-fill {
+        fill: var(--blip-eye);
+    }
+    .blip-eye-stroke {
+        fill: none;
+        stroke: var(--blip-eye);
+        stroke-width: 5.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .blip-look {
+        transition: transform var(--blip-settle);
+    }
+    .blip[data-active="true"] .blip-look {
+        transition: transform 360ms var(--ease-spring-pop);
+    }
+    .blip-eyes {
+        transform-origin: 50% 50%;
+    }
+    .blip[data-active="true"] .blip-eyes {
+        animation: blip-eyes-in 320ms var(--ease-spring-pop);
+    }
+    .blip[data-active="true"]:is([data-state="idle"], [data-state="think"]) .blip-eyes > g {
+        transform-origin: 50% 50%;
+        animation: blip-blink 4s infinite 1s;
+    }
+
+    /* ---------------- Parallel-universe echoes ---------------- */
+    .blip-echo {
+        transition:
+            transform var(--blip-settle),
+            opacity var(--blip-settle);
+    }
+    .blip[data-active="true"] .blip-echo {
+        transition:
+            transform 420ms var(--ease-spring-pop),
+            opacity 260ms ease;
+    }
+    .blip-echo path {
+        fill: currentColor;
+        stroke: currentColor;
+    }
+    .blip-echo-1 {
+        color: var(--blip-echo-1);
+        opacity: var(--blip-echo-1-opacity);
+        transform: translate(7.5px, -6px);
+    }
+    .blip-echo-2 {
+        color: var(--blip-echo-2);
+        opacity: var(--blip-echo-2-opacity);
+        transform: translate(15px, -12px);
+    }
+    /* The dark artwork has a single, closer echo. */
+    .dark .blip-echo-1 {
+        display: none;
+    }
+    .dark .blip-echo-2 {
+        transform: translate(10px, -8px);
+    }
+
+    /* ---------------- Idle float ---------------- */
+    .blip[data-active="true"] .blip-float {
+        animation: blip-float 3s ease-in-out infinite;
+    }
+
+    /* ---------------- Awake: echoes fan out, eyes glance at them ---------------- */
+    .blip[data-active="true"] .blip-echo-1 {
+        transform: translate(12px, -10px);
+        opacity: calc(var(--blip-echo-1-opacity) + 0.1);
+    }
+    .blip[data-active="true"] .blip-echo-2 {
+        transform: translate(24px, -19px);
+    }
+    .dark .blip[data-active="true"] .blip-echo-2 {
+        transform: translate(17px, -14px);
+        opacity: 0.5;
+    }
+    .blip[data-active="true"] .blip-look {
+        transform: translate(3px, -2.5px);
+    }
+    /* Sleeping Blip only stirs: echoes peek, eyes stay shut. */
+    .blip[data-active="true"][data-state="sleep"] .blip-look {
+        transform: translate(0, -1px);
+    }
+
+    /* ---------------- States ---------------- */
+    .blip[data-active="true"][data-state="code"] .blip-float {
+        transform-origin: 50% 100%;
+        animation: blip-bounce 0.45s ease-in-out infinite;
+    }
+    .blip[data-active="true"][data-state="happy"] .blip-float {
+        transform-origin: 50% 100%;
+        animation: blip-hop 1.6s var(--ease-spring-pop) infinite;
+    }
+    .blip[data-active="true"][data-state="portal"] .blip-float {
+        animation: blip-glitch 0.5s steps(2) infinite;
+    }
+    .blip[data-active="true"][data-state="portal"] .blip-echo {
+        animation: blip-warp 0.5s steps(2) infinite;
+    }
+    .blip[data-active="true"][data-state="sleep"] .blip-float {
+        animation: blip-float 5s ease-in-out infinite;
+    }
+    .blip[data-state="sleep"] .blip-echo-1 {
+        transform: translate(3px, -2.5px);
+    }
+    .blip[data-state="sleep"] .blip-echo-2 {
+        transform: translate(6px, -5px);
+    }
+
+    @keyframes blip-float {
+        0%, 100% { translate: 0 2.5px; }
+        50% { translate: 0 -2.5px; }
+    }
+    @keyframes blip-blink {
+        0%, 92%, 100% { scale: 1 1; }
+        96% { scale: 1 0.08; }
+    }
+    @keyframes blip-eyes-in {
+        from { scale: 0.4; opacity: 0; }
+        to { scale: 1; opacity: 1; }
+    }
+    @keyframes blip-bounce {
+        0%, 100% { translate: 0 4px; scale: 1.04 0.96; }
+        50% { translate: 0 -6px; scale: 0.96 1.04; }
+    }
+    @keyframes blip-hop {
+        0%, 55%, 100% { translate: 0 0; scale: 1 1; }
+        10% { translate: 0 2px; scale: 1.06 0.94; }
+        28% { translate: 0 -9px; scale: 0.97 1.03; }
+        45% { translate: 0 1px; scale: 1.03 0.97; }
+    }
+    @keyframes blip-glitch {
+        0%, 100% { translate: 0 0; }
+        25% { translate: -4px 2px; }
+        50% { translate: 4px -2px; }
+        75% { translate: -2px -2px; }
+    }
+    @keyframes blip-warp {
+        0%, 100% { translate: 0 0; }
+        50% { translate: 5px -4px; }
+    }
+}

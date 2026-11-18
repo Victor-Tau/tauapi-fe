@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MLTVRS 吉祥物 Blip 精修居中工作台</title>
+  <style>
+    :root {
+      --bg-page: #F5F5F7;
+      --bg-card: #FFFFFF;
+      --logo-grey: #EAEAEA;
+      --ink-black: #080808;
+      --text-main: #1D1D1F;
+      --text-sub: #86868B;
+      --accent: #080808;
+    }
+
+    body.theme-claude { --accent: #D97757; }
+    body.theme-cyber  { --accent: #6E56CF; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      padding: 36px 24px 80px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    /* 主工作台布局 */
+    .studio {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 28px;
+      background: var(--bg-card);
+      border-radius: 32px;
+      padding: 32px;
+      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.04);
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 860px) {
+      .studio { grid-template-columns: 1fr; }
+    }
+
+    /* 左侧大图预览舞台 */
+    .stage-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #F8F8FA;
+      border-radius: 24px;
+      padding: 28px;
+      position: relative;
+    }
+
+    .main-svg {
+      width: 300px;
+      height: 300px;
+      display: block;
+    }
+
+    .stage-caption {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* 右侧控制面板 */
+    .panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .panel-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+    }
+
+    .panel-header p {
+      font-size: 14px;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+
+    .control-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-sub);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      border: 1.5px solid #EBEBEF;
+      background: #FFFFFF;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    button:hover {
+      border-color: #C7C7CC;
+    }
+
+    button.active {
+      background: var(--ink-black);
+      color: #FFFFFF;
+      border-color: var(--ink-black);
+    }
+
+    /* 滑块微调区 */
+    .sliders {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      background: #F8F8FA;
+      padding: 14px 18px;
+      border-radius: 14px;
+    }
+
+    .slider-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--ink-black);
+      cursor: pointer;
+    }
+
+    /* 底部操作栏 */
+    .action-bar {
+      display: flex;
+      gap: 12px;
+      padding-top: 8px;
+      border-top: 1px solid #F0F0F3;
+    }
+
+    .btn-primary {
+      background: #0071E3;
+      color: #FFFFFF;
+      border-color: #0071E3;
+      justify-content: center;
+      flex: 1;
+      padding: 12px 20px;
+      font-size: 14px;
+    }
+
+    .btn-primary:hover {
+      background: #0077ED;
+      border-color: #0077ED;
+    }
+
+    /* 多尺寸与多场景实测网格 */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .preview-card {
+      background: var(--bg-card);
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .preview-card.dark {
+      background: #161618;
+      color: #F5F5F7;
+    }
+
+    .preview-info h3 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .preview-info p {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    /* ================= 对称居中呼吸动画 ================= */
+    /* 注意：上下各浮动 3px，严格以 Y=0 为对称中心，绝不偏上！ */
+    @keyframes centeredFloat {
+      0%, 100% { transform: translateY(2.5px); }
+      50% { transform: translateY(-2.5px); }
+    }
+
+    @keyframes blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      96% { transform: scaleY(0.08); }
+    }
+
+    @keyframes bounceCode {
+      0%, 100% { transform: translateY(4px) scale(1.04, 0.96); }
+      50% { transform: translateY(-6px) scale(0.96, 1.04); }
+    }
+
+    @keyframes glitchJump {
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(-4px, 2px); }
+      50% { transform: translate(4px, -2px); }
+      75% { transform: translate(-2px, -2px); }
+    }
+
+    .anim-wrap {
+      transform-origin: 120px 120px;
+      animation: centeredFloat 3s ease-in-out infinite;
+    }
+
+    body.no-anim .anim-wrap,
+    body.no-anim .blip-eyes {
+      animation: none !important;
+    }
+
+    body.state-code .anim-wrap {
+      animation: bounceCode 0.45s ease-in-out infinite;
+    }
+
+    body.state-portal .anim-wrap {
+      animation: glitchJump 0.5s steps(2) infinite;
+    }
+
+    .blip-eyes {
+      transform-origin: 120px 115px;
+      animation: blink 4s infinite;
+    }
+
+    .eye-group { display: none; }
+    body.state-idle .eye-idle,
+    body.state-portal .eye-idle { display: block; }
+    body.state-think .eye-think { display: block; }
+    body.state-code .eye-code { display: block; }
+    body.state-happy .eye-happy { display: block; }
+    body.state-sleep .eye-sleep { display: block; }
+
+    /* 参考线开关 */
+    .guide-overlay {
+      display: none;
+      pointer-events: none;
+    }
+    body.show-guides .guide-overlay {
+      display: block;
+    }
+  </style>
+</head>
+<body class="state-idle show-guides">
+
+<div class="container">
+
+  <!-- 核心精修工作台 -->
+  <div class="studio">
+    <!-- 左侧画布 -->
+    <div class="stage-box">
+      <svg id="blipMasterSvg" class="main-svg" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+        <!-- 1. Apple 标准超椭圆底板 (范围 20~220，正中心为 120, 120) -->
+        <rect x="20" y="20" width="200" height="200" rx="52" fill="#EAEAEA"/>
+
+        <!-- 2. 整体居中控制容器 (默认已做视觉重心补偿) -->
+        <g id="centerOffsetGroup" transform="translate(-5, 4)">
+          <g class="anim-wrap">
+
+            <!-- 平行宇宙分身层 2 (最远层) -->
+            <g id="echoLayer2" transform="translate(15, -12)" opacity="0.22">
+              <path d="M 76 70 H 100 V 84 H 140 V 70 H 164 V 98 H 180 V 140 H 164 V 170 H 138 V 152 H 102 V 170 H 76 V 140 H 60 V 98 H 76 Z"
+                    fill="var(--accent)" stroke="var(--accent)" stroke-width="18" stroke-linejoin="round" stroke-linecap="round"/>
+            </g>
+
+            <!-- 平行宇宙分身层 1 (中距层) -->
+            <g id="echoLayer1" transform="translate(7.5, -6)" opacity="0.45">
+              <path d="M 76 70 H 100 V 84 H 140 V 70 H 164 V 98 H 180 V 140 H 164 V 170 H 138 V 152 H 102 V 170 H 76 V 140 H 60 V 98 H 76 Z"
+                    fill="#99999E" stroke="#99999E" stroke-width="18" stroke-linejoin="round" stroke-linecap="round"/>
+            </g>
+
+            <!-- 3. Blip 本体：严格以 (120, 120) 为几何中心 -->
+            <!-- 左边界: 60-9=51, 右边界: 180+9=189 -> 水平中心 (51+189)/2 = 120.0 -->
+            <!-- 上边界: 70-9=61, 下边界: 170+9=179 -> 垂直中心 (61+179)/2 = 120.0 -->
+            <g id="blipMainBody">
+              <path d="M 76 70 H 100 V 84 H 140 V 70 H 164 V 98 H 180 V 140 H 164 V 170 H 138 V 152 H 102 V 170 H 76 V 140 H 60 V 98 H 76 Z"
+                    fill="var(--ink-black)" stroke="var(--ink-black)" stroke-width="18" stroke-linejoin="round" stroke-linecap="round"/>
+
+              <!-- 标志性细节：与你原版 Logo 字母 M/L/R/S 完全同款的内部白色充气折痕线 -->
+              <!-- 头顶左耳高光折痕 -->
+              <path d="M 76 73 Q 86 68 95 73" fill="none" stroke="#EAEAEA" stroke-width="3.5" stroke-linecap="round"/>
+              <!-- 左右手臂内角折痕 (呼应 Logo 的 L 和 R) -->
+              <path d="M 76 135 Q 84 141 92 137" fill="none" stroke="#EAEAEA" stroke-width="4" stroke-linecap="round"/>
+              <path d="M 148 137 Q 156 141 164 135" fill="none" stroke="#EAEAEA" stroke-width="4" stroke-linecap="round"/>
+              <!-- 肚子底部微笑折痕 (呼应 Logo 的 M 裆部弧线) -->
+              <path d="M 104 144 Q 120 155 136 144" fill="none" stroke="#EAEAEA" stroke-width="4.5" stroke-linecap="round"/>
+
+              <!-- 4. 眼神系统 (严格关于 X=120 对称) -->
+              <g class="blip-eyes">
+                <!-- 日常待机眼 (左眼中心94, 右眼中心146, 距中轴线120均为26px) -->
+                <g class="eye-group eye-idle" fill="#FFFFFF">
+                  <rect x="86" y="103" width="16" height="22" rx="6"/>
+                  <rect x="138" y="103" width="16" height="22" rx="6"/>
+                </g>
+
+                <!-- AI 思考眼 (一高一低终端光标) -->
+                <g class="eye-group eye-think" fill="#FFFFFF">
+                  <rect x="84" y="111" width="20" height="8" rx="4"/>
+                  <rect x="137" y="103" width="18" height="18" rx="6"/>
+                </g>
+
+                <!-- 高速编码眼 (> <) -->
+                <g class="eye-group eye-code" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="87,106 99,114 87,122"/>
+                  <polyline points="153,106 141,114 153,122"/>
+                </g>
+
+                <!-- 开心完成眼 (^ ^) -->
+                <g class="eye-group eye-happy" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M 85 118 Q 94 105 103 118"/>
+                  <path d="M 137 118 Q 146 105 155 118"/>
+                </g>
+
+                <!-- 休眠眼 (- -) -->
+                <g class="eye-group eye-sleep" fill="#FFFFFF">
+                  <rect x="84" y="112" width="20" height="6" rx="3"/>
+                  <rect x="136" y="112" width="20" height="6" rx="3"/>
+                </g>
+              </g>
+            </g>
+
+          </g>
+        </g>
+
+        <!-- 5. 黄金居中对齐参考线 (可一键隐藏，导出时自动剔除) -->
+        <g class="guide-overlay">
+          <!-- 垂直与水平正中心十字线 (X=120, Y=120) -->
+          <line x1="120" y1="20" x2="120" y2="220" stroke="#0071E3" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+          <line x1="20" y1="120" x2="220" y2="120" stroke="#0071E3" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+          <!-- 安全边距框 (50 ~ 190) -->
+          <rect x="50" y="50" width="140" height="140" rx="20" fill="none" stroke="#FF3B30" stroke-width="1" stroke-dasharray="3 3" opacity="0.45"/>
+          <!-- 中心靶心 -->
+          <circle cx="120" cy="120" r="3" fill="#0071E3" opacity="0.7"/>
+        </g>
+      </svg>
+
+      <div class="stage-caption">
+        <span>🔵 蓝线：画布正中心 (120, 120)</span>
+        <span>🔴 红框：安全视觉边界</span>
+      </div>
+    </div>
+
+    <!-- 右侧精修控制器 -->
+    <div class="panel">
+      <div class="panel-header">
+        <h1>03 · Blip（布利普）居中精修台</h1>
+        <p>已将本体几何中心锁定在 (120, 120)，并提供 4 种平行宇宙重影平衡方案</p>
+      </div>
+
+      <!-- 1. 平行宇宙重影居中模式 -->
+      <div class="control-section">
+        <div class="control-label">
+          <span>① 选择平行宇宙重影模式（解决右上偏重问题）</span>
+        </div>
+        <div class="btn-grid" id="echoModeGroup">
+          <button class="active" onclick="setEchoMode('compensated', this)">
+            <span>右上叠影 (重心居中)</span>
+            <small>✓</small>
+          </button>
+          <button onclick="setEchoMode('symmetrical', this)">
+            <span>左右对称虫洞 (绝对居中)</span>
+            <small>⇄</small>
+          </button>
+          <button onclick="setEchoMode('aura', this)">
+            <span>中心同心扩散</span>
+            <small>◎</small>
+          </button>
+          <button onclick="setEchoMode('none', this)">
+            <span>无重影纯享版</span>
+            <small>●</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. 表情与动作状态 -->
+      <div class="control-section">
+        <div class="control-label"><span>② 切换表情与状态</span></div>
+        <div class="btn-row" id="stateGroup">
+          <button class="active" onclick="setState('state-idle', this)">● 待机</button>
+          <button onclick="setState('state-think', this)">✦ 思考</button>
+          <button onclick="setState('state-code', this)">⚡ 编码</button>
+          <button onclick="setState('state-happy', this)">^ ^ 开心</button>
+          <button onclick="setState('state-portal', this)">❖ 跃迁</button>
+          <button onclick="setState('state-sleep', this)">– 休眠</button>
+        </div>
+      </div>
+
+      <!-- 3. 手动像素级 X/Y 偏移微调 -->
+      <div class="control-section">
+        <div class="control-label">
+          <span>③ 手动像素级重心微调</span>
+          <span id="offsetReadout">当前补偿: X = -5px, Y = +4px</span>
+        </div>
+        <div class="sliders">
+          <div class="slider-item">
+            <span>水平位置 (X 轴):</span>
+            <input type="range" id="sliderX" min="-20" max="20" step="0.5" value="-5" oninput="updateManualOffset()">
+          </div>
+          <div class="slider-item">
+            <span>垂直位置 (Y 轴):</span>
+            <input type="range" id="sliderY" min="-20" max="20" step="0.5" value="4" oninput="updateManualOffset()">
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 辅助工具与导出 -->
+      <div class="action-bar">
+        <button id="guideBtn" class="active" onclick="toggleGuides(this)">📏 居中参考线</button>
+        <button id="animBtn" onclick="toggleAnim(this)">⏸ 暂停动画定格</button>
+        <button onclick="toggleTheme(this)">🎨 切换暖橙重影</button>
+        <button class="btn-primary" onclick="copyCleanSvg(this)">📋 复制纯净 SVG 代码</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部：不同尺寸与应用场景下的居中实测 -->
+  <div class="preview-grid">
+    <!-- 场景1：App 图标尺寸 -->
+    <div class="preview-card">
+      <svg width="72" height="72" viewBox="0 0 240 240" class="sync-svg"></svg>
+      <div class="preview-info">
+        <h3>iOS / macOS 图标 (72px)</h3>
+        <p>四周留白均匀，视觉重心稳固</p>
+      </div>
+    </div>
+
+    <!-- 场景2：社交媒体圆形头像 -->
+    <div class="preview-card">
+      <svg width="72" height="72" viewBox="0 0 240 240" style="border-radius: 50%; overflow: hidden;" class="sync-svg"></svg>
+      <div class="preview-info">
+        <h3>圆形社交头像 (X / 微信)</h3>
+        <p>裁切成正圆后依然保持正中</p>
+      </div>
+    </div>
+
+    <!-- 场景3：小尺寸网页 Favicon -->
+    <div class="preview-card">
+      <div style="width:72px; height:72px; background:#F0F0F3; border-radius:16px; display:flex; align-items:center; justify-content:center; gap:10px;">
+        <svg width="32" height="32" viewBox="0 0 240 240" class="sync-svg"></svg>
+        <svg width="20" height="20" viewBox="0 0 240 240" class="sync-svg"></svg>
+      </div>
+      <div class="preview-info">
+        <h3>极小尺寸 (32px / 20px)</h3>
+        <p>状态栏与网页标签页高识别度</p>
+      </div>
+    </div>
+
+    <!-- 场景4：暗色终端 CLI 模式 -->
+    <div class="preview-card dark">
+      <svg width="72" height="72" viewBox="0 0 240 240">
+        <rect x="20" y="20" width="200" height="200" rx="52" fill="#252529"/>
+        <g transform="translate(-4, 3)">
+          <g transform="translate(10, -8)" opacity="0.35">
+            <path d="M 76 70 H 100 V 84 H 140 V 70 H 164 V 98 H 180 V 140 H 164 V 170 H 138 V 152 H 102 V 170 H 76 V 140 H 60 V 98 H 76 Z"
+                  fill="#D97757" stroke="#D97757" stroke-width="18" stroke-linejoin="round"/>
+          </g>
+          <path d="M 76 70 H 100 V 84 H 140 V 70 H 164 V 98 H 180 V 140 H 164 V 170 H 138 V 152 H 102 V 170 H 76 V 140 H 60 V 98 H 76 Z"
+                fill="#EAEAEA" stroke="#EAEAEA" stroke-width="18" stroke-linejoin="round"/>
+          <path d="M 104 144 Q 120 155 136 144" fill="none" stroke="#252529" stroke-width="5" stroke-linecap="round"/>
+          <rect x="86" y="103" width="16" height="22" rx="6" fill="#161618"/>
+          <rect x="138" y="103" width="16" height="22" rx="6" fill="#161618"/>
+        </g>
+      </svg>
+      <div class="preview-info">
+        <h3>Dark Mode 终端反色版</h3>
+        <p>深空灰底板 + 暖橙平行宇宙残影</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const centerGroup = document.getElementById('centerOffsetGroup');
+  const echo1 = document.getElementById('echoLayer1');
+  const echo2 = document.getElementById('echoLayer2');
+  const sliderX = document.getElementById('sliderX');
+  const sliderY = document.getElementById('sliderY');
+  const readout = document.getElementById('offsetReadout');
+
+  // 同步下方小预览图
+  function syncMiniPreviews() {
+    const masterContent = document.getElementById('blipMasterSvg').innerHTML;
+    document.querySelectorAll('.sync-svg').forEach(svg => {
+      svg.innerHTML = masterContent;
+      const guide = svg.querySelector('.guide-overlay');
+      if (guide) guide.remove();
+    });
+  }
+
+  // 切换 4 种重影平衡模式
+  function setEchoMode(mode, btn) {
+    document.querySelectorAll('#echoModeGroup button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    echo1.style.display = 'block';
+    echo2.style.display = 'block';
+
+    if (mode === 'compensated') {
+      // 模式1：右上重影，本体向左下补偿 (-5, +4)，使整体居中
+      echo1.setAttribute('transform', 'translate(7.5, -6)');
+      echo2.setAttribute('transform', 'translate(15, -12)');
+      setSliders(-5, 4);
+    } else if (mode === 'symmetrical') {
+      // 模式2：左右对称展开虫洞重影，本体严格在 (0, 0) 正中心
+      echo1.setAttribute('transform', 'translate(-11, 0) scale(0.96)');
+      echo1.style.transformOrigin = '120px 120px';
+      echo2.setAttribute('transform', 'translate(11, 0) scale(0.96)');
+      echo2.style.transformOrigin = '120px 120px';
+      setSliders(0, 0);
+    } else if (mode === 'aura') {
+      // 模式3：同心向外扩散重影，本体严格在 (0, 0) 正中心
+      echo1.setAttribute('transform', 'translate(0, -5) scale(1.05)');
+      echo1.style.transformOrigin = '120px 120px';
+      echo2.setAttribute('transform', 'translate(0, -10) scale(1.1)');
+      echo2.style.transformOrigin = '120px 120px';
+      setSliders(0, 3);
+    } else if (mode === 'none') {
+      // 模式4：无重影纯享版，100% 几何中心 (0, 0)
+      echo1.style.display = 'none';
+      echo2.style.display = 'none';
+      setSliders(0, 0);
+    }
+    syncMiniPreviews();
+  }
+
+  function setSliders(x, y) {
+    sliderX.value = x;
+    sliderY.value = y;
+    updateManualOffset();
+  }
+
+  function updateManualOffset() {
+    const x = parseFloat(sliderX.value);
+    const y = parseFloat(sliderY.value);
+    centerGroup.setAttribute('transform', `translate(${x}, ${y})`);
+    readout.textContent = `当前补偿: X = ${x > 0 ? '+' + x : x}px, Y = ${y > 0 ? '+' + y : y}px`;
+    syncMiniPreviews();
+  }
+
+  function setState(stateClass, btn) {
+    document.body.classList.remove('state-idle', 'state-think', 'state-code', 'state-happy', 'state-portal', 'state-sleep');
+    document.body.classList.add(stateClass);
+    document.querySelectorAll('#stateGroup button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function toggleGuides(btn) {
+    document.body.classList.toggle('show-guides');
+    btn.classList.toggle('active');
+  }
+
+  function toggleAnim(btn) {
+    document.body.classList.toggle('no-anim');
+    btn.classList.toggle('active');
+    btn.textContent = document.body.classList.contains('no-anim') ? '▶ 恢复呼吸动画' : '⏸ 暂停动画定格';
+  }
+
+  function toggleTheme(btn) {
+    document.body.classList.toggle('theme-claude');
+    btn.classList.toggle('active');
+    syncMiniPreviews();
+  }
+
+  // 一键导出干净独立的 SVG 文件代码
+  function copyCleanSvg(btn) {
+    const clone = document.getElementById('blipMasterSvg').cloneNode(true);
+    const guide = clone.querySelector('.guide-overlay');
+    if (guide) guide.remove();
+    // 将 CSS 变量替换为真实色值以便在 Illustrator / Figma 中直接打开
+    const accentColor = document.body.classList.contains('theme-claude') ? '#D97757' : '#080808';
+    let svgString = clone.outerHTML
+      .replace(/var\(--ink-black\)/g, '#080808')
+      .replace(/var\(--accent\)/g, accentColor);
+
+    navigator.clipboard.writeText(svgString).then(() => {
+      const oldText = btn.textContent;
+      btn.textContent = '✅ 已复制 SVG 代码！可粘贴保存为 .svg';
+      setTimeout(() => btn.textContent = oldText, 2500);
+    });
+  }
+
+  // 初始化同步
+  syncMiniPreviews();
+</script>
+
+</body>
+</html>

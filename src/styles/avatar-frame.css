@@ -1,0 +1,127 @@
+/* ---------------- VIP avatar frames (components/avatar-frame.tsx) ----------------
+   The ring is an SVG circle stroke laid over the avatar's box with a negative
+   inset, so it sits outside the avatar without taking layout space. */
+
+.avatar-frame {
+    --spark: 5px;
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    border-radius: 9999px;
+}
+.avatar-frame[data-size="sm"] {
+    --spark: 4px;
+}
+.avatar-frame[data-size="lg"] {
+    --spark: 7px;
+}
+
+.avatar-frame-ring {
+    position: absolute;
+    inset: var(--ring-inset);
+    width: calc(100% - 2 * var(--ring-inset));
+    height: calc(100% - 2 * var(--ring-inset));
+    overflow: visible;
+    pointer-events: none;
+    transform-origin: center;
+}
+
+/* Corner badge: a small disc holding a line-art mortarboard, hung on the
+   top-right of the avatar. Edit here:
+   top/right = position (fraction of the disc size), rotate = cap tilt,
+   --badge (SIZES in avatar-frame.tsx) = disc size. */
+.avatar-frame-badge {
+    position: absolute;
+    top: calc(var(--badge) * -0.2);
+    right: calc(var(--badge) * -0.2);
+    z-index: 1;
+    display: grid;
+    box-sizing: border-box;
+    width: var(--badge);
+    height: var(--badge);
+    place-items: center;
+    border-radius: 9999px;
+    /* clip-path keeps the disc round even where border-radius and
+       backdrop-filter do not combine, which showed a square behind the cap. */
+    clip-path: circle(50%);
+    overflow: hidden;
+    /* Milky starlight white, see-through in both themes. */
+    background:
+        radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.9), transparent 60%),
+        rgba(253, 248, 236, 0.78);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    pointer-events: auto;
+}
+/* The cap nearly fills the disc, so the disc hugs it. */
+.avatar-frame-badge svg {
+    width: 76%;
+    height: 76%;
+    stroke-width: 2.4;
+    transform: translateY(4%) rotate(15deg);
+}
+
+/* Higher tiers turn the sheen faster. */
+.avatar-frame[data-vip-frame="3"] .avatar-frame-ring {
+    animation: avatar-frame-spin 10s linear infinite;
+}
+.avatar-frame[data-vip-frame="4"] .avatar-frame-ring {
+    animation: avatar-frame-spin 6s linear infinite;
+}
+.avatar-frame[data-vip-frame="5"] .avatar-frame-ring {
+    animation: avatar-frame-spin 4s linear infinite;
+}
+
+/* Tiny four-point stars on the diamond ring (≈ 45°, 135°, 225°). */
+.avatar-frame-spark {
+    --spark-pos: calc(14.6% - var(--frame-out) * 0.7 - var(--spark) / 2);
+    position: absolute;
+    width: var(--spark);
+    height: var(--spark);
+    background: #fff;
+    clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+    filter: drop-shadow(0 0 1px #7c5cf0);
+    pointer-events: none;
+    animation: avatar-frame-twinkle 2.6s ease-in-out infinite;
+}
+.avatar-frame-spark:nth-of-type(1) {
+    top: var(--spark-pos);
+    right: var(--spark-pos);
+}
+.avatar-frame-spark:nth-of-type(2) {
+    bottom: var(--spark-pos);
+    left: var(--spark-pos);
+    animation-delay: -0.9s;
+}
+.avatar-frame-spark:nth-of-type(3) {
+    top: var(--spark-pos);
+    left: var(--spark-pos);
+    animation-delay: -1.8s;
+}
+
+@keyframes avatar-frame-spin {
+    to {
+        transform: rotate(1turn);
+    }
+}
+@keyframes avatar-frame-twinkle {
+    0%,
+    100% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .avatar-frame-ring {
+        animation: none !important;
+    }
+    .avatar-frame-spark {
+        animation: none !important;
+        opacity: 0;
+    }
+}

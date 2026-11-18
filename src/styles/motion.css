@@ -1,0 +1,328 @@
+/* ==========================================================================
+   Motion language from demo.html.
+   - expand (open) is slower than collapse (close)
+   - overlays enter/leave with blur + scale + a short directional offset
+   - presses scale down on a spring; hover pops icons slightly
+   Base UI marks entering/leaving popups with [data-starting-style] /
+   [data-ending-style] and waits for these transitions before unmounting.
+   ========================================================================== */
+
+@layer components {
+    /* ---- Floating popups: menus, selects, popovers, tooltips, toasts ---- */
+    .motion-popover {
+        transform-origin: var(--transform-origin, 50% 0%);
+        transition:
+            opacity 340ms var(--ease-damped-expand),
+            transform 440ms var(--ease-damped-expand),
+            filter 340ms var(--ease-damped-expand);
+        will-change: transform, opacity, filter;
+    }
+    .motion-popover[data-starting-style],
+    .motion-popover[data-ending-style] {
+        opacity: 0;
+        filter: blur(3px);
+        transform: translate3d(var(--motion-x, 0), var(--motion-y, 0), 0) scale(0.955);
+    }
+    .motion-popover[data-ending-style] {
+        transition:
+            opacity 240ms var(--ease-damped-collapse),
+            transform 300ms var(--ease-damped-collapse),
+            filter 240ms var(--ease-damped-collapse);
+    }
+    .motion-popover[data-side="bottom"] { --motion-y: -10px; }
+    .motion-popover[data-side="top"] { --motion-y: 14px; }
+    .motion-popover[data-side="left"],
+    .motion-popover[data-side="inline-start"] { --motion-x: 10px; }
+    .motion-popover[data-side="right"],
+    .motion-popover[data-side="inline-end"] { --motion-x: -10px; }
+
+    /* Tooltips are lighter and quicker. */
+    .motion-tooltip {
+        transform-origin: var(--transform-origin, 50% 100%);
+        transition:
+            opacity 200ms var(--ease-damped-expand),
+            transform 260ms var(--ease-damped-expand),
+            filter 200ms var(--ease-damped-expand);
+    }
+    .motion-tooltip[data-starting-style],
+    .motion-tooltip[data-ending-style] {
+        opacity: 0;
+        filter: blur(2px);
+        transform: scale(0.94);
+    }
+    .motion-tooltip[data-ending-style] {
+        transition:
+            opacity 140ms var(--ease-damped-collapse),
+            transform 180ms var(--ease-damped-collapse),
+            filter 140ms var(--ease-damped-collapse);
+    }
+
+    /* ---- Modal dialogs ---- */
+    .motion-dialog {
+        transition:
+            opacity 340ms var(--ease-damped-expand),
+            transform 460ms var(--ease-damped-expand),
+            filter 340ms var(--ease-damped-expand);
+    }
+    .motion-dialog[data-starting-style],
+    .motion-dialog[data-ending-style] {
+        opacity: 0;
+        filter: blur(4px);
+        transform: translate3d(0, 14px, 0) scale(0.955);
+    }
+    .motion-dialog[data-ending-style] {
+        transition:
+            opacity 240ms var(--ease-damped-collapse),
+            transform 300ms var(--ease-damped-collapse),
+            filter 240ms var(--ease-damped-collapse);
+    }
+
+    .motion-backdrop {
+        transition:
+            opacity 320ms var(--ease-damped-expand),
+            backdrop-filter 320ms var(--ease-damped-expand);
+    }
+    .motion-backdrop[data-starting-style],
+    .motion-backdrop[data-ending-style] {
+        opacity: 0;
+        backdrop-filter: blur(0);
+    }
+    .motion-backdrop[data-ending-style] {
+        transition-duration: 240ms;
+        transition-timing-function: var(--ease-damped-collapse);
+    }
+
+    /* ---- Side sheet (drawer): 460ms in / 380ms out like the sidebar ---- */
+    .motion-sheet {
+        transition:
+            transform 460ms var(--ease-damped-expand),
+            opacity 300ms var(--ease-damped-expand);
+    }
+    .motion-sheet[data-starting-style],
+    .motion-sheet[data-ending-style] {
+        opacity: 0.4;
+        transform: translate3d(var(--sheet-from-x, 0), var(--sheet-from-y, 0), 0);
+    }
+    .motion-sheet[data-ending-style] {
+        transition:
+            transform 380ms var(--ease-damped-collapse),
+            opacity 380ms var(--ease-damped-collapse);
+    }
+    .motion-sheet[data-side="right"] { --sheet-from-x: calc(100% + 16px); }
+    .motion-sheet[data-side="left"] { --sheet-from-x: calc(-100% - 16px); }
+    .motion-sheet[data-side="top"] { --sheet-from-y: calc(-100% - 16px); }
+    .motion-sheet[data-side="bottom"] { --sheet-from-y: calc(100% + 16px); }
+
+    /* ---- Press feedback & icon pop ---- */
+    .press {
+        transition:
+            transform 150ms var(--ease-spring-pop),
+            translate 150ms var(--ease-spring-pop),
+            background-color 180ms ease-out,
+            color 180ms ease-out,
+            opacity 150ms ease-out,
+            box-shadow 180ms ease-out;
+    }
+    .press:active:not(:disabled):not([aria-disabled="true"]) {
+        transform: scale(0.96);
+    }
+
+    .icon-pop svg {
+        transition: transform 200ms var(--ease-spring-pop);
+    }
+    .icon-pop:hover svg,
+    .icon-pop[data-highlighted] svg {
+        transform: scale(1.1);
+    }
+
+    /* ---- Page switch: a short "fade through" --------------------------
+       1. the previous page fades out and lifts slightly (fast, 110ms);
+       2. the target page's skeleton fades in — after 90ms, so a switch that
+          completes sooner never flashes it;
+       3. the new page's sections rise in with a small stagger while the
+          skeleton fades out on top of them (same grid cell). */
+    .page-stage {
+        display: grid;
+    }
+    .page-stage > * {
+        grid-area: 1 / 1;
+        min-width: 0;
+    }
+
+    .page-view {
+        transition:
+            opacity 110ms var(--ease-damped-collapse),
+            translate 110ms var(--ease-damped-collapse),
+            display 110ms allow-discrete;
+    }
+    .page-view[data-leaving="true"] {
+        display: none;
+        opacity: 0;
+        translate: 0 -6px;
+        pointer-events: none;
+    }
+    /* Sections of the page (children of its root) rise in one after another.
+       Fill "backwards" only: nothing is left on the element afterwards, so no
+       stacking context or containing block lingers. */
+    .page-view > * > * {
+        animation: page-section-enter 420ms var(--ease-damped-expand) backwards;
+    }
+    .page-view > * > :nth-child(2) { animation-delay: 35ms; }
+    .page-view > * > :nth-child(3) { animation-delay: 70ms; }
+    .page-view > * > :nth-child(4) { animation-delay: 105ms; }
+    .page-view > * > :nth-child(5) { animation-delay: 140ms; }
+    .page-view > * > :nth-child(n + 6) { animation-delay: 175ms; }
+
+    .route-skeleton {
+        opacity: 1;
+        transition: opacity 200ms ease-out 90ms;
+    }
+    @starting-style {
+        .route-skeleton {
+            opacity: 0;
+        }
+    }
+    .route-skeleton[data-leaving="true"] {
+        opacity: 0;
+        pointer-events: none;
+        /* Keep in sync with SKELETON_FADE_MS in layouts/app-layout.tsx. */
+        transition: opacity 200ms ease-in;
+    }
+
+    /* ---- Skeleton: static neutral blocks + one shared shimmer beam ----
+       The beam's gradient is anchored to the viewport (background-attachment:
+       fixed), so every block on screen is lit by the same sweep — the demo's
+       full-layer shimmer — while real content is never washed over.
+       Blocks show at once (no fade-in delay): the route skeleton appears on
+       the click frame and hands over to the page's own skeleton blocks, and
+       a delayed fade would make those blink in between. */
+    [data-slot="skeleton"] {
+        background-color: var(--sk-block-mid);
+        background-image: linear-gradient(
+            90deg,
+            transparent 0%,
+            var(--shimmer-edge) 25%,
+            var(--shimmer-core) 50%,
+            var(--shimmer-edge) 75%,
+            transparent 100%
+        );
+        background-size: 100vw 100%;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        animation: skeleton-sweep 1500ms linear infinite;
+    }
+}
+
+@keyframes skeleton-sweep {
+    from { background-position: -100vw 0; }
+    to { background-position: 100vw 0; }
+}
+
+@keyframes page-section-enter {
+    from {
+        opacity: 0;
+        translate: 0 10px;
+    }
+}
+
+@keyframes pill-confirm-bounce {
+    0% { scale: 0.94; }
+    55% { scale: 1.025; }
+    100% { scale: 1; }
+}
+
+@keyframes icon-confirm-pop {
+    0% { transform: scale(0.82); }
+    50% { transform: scale(1.18) rotate(-4deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes label-confirm-slide {
+    0% { transform: translate3d(0, 0, 0); }
+    40% { transform: translate3d(4px, 0, 0); }
+    100% { transform: translate3d(0, 0, 0); }
+}
+
+/* Theme switch: the whole page cross-fades for 240ms (demo). The fade runs
+   on View Transition snapshots (see components/theme-provider.tsx), so the
+   compositor blends two images instead of every element animating colours. */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 240ms;
+    animation-timing-function: ease-out;
+}
+/* Component colour transitions are paused for the switch (see
+   switchTheme); the toggle's own icon spin keeps running. */
+html.theme-switching *:not(.theme-toggle-icon),
+html.theme-switching *::before,
+html.theme-switching *::after {
+    transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0ms !important;
+        scroll-behavior: auto !important;
+    }
+    [data-slot="skeleton"] {
+        background-image: none;
+    }
+}
+
+/* Auth pages (login ⇄ register / forgot password): links navigate with
+   React Router's `viewTransition`. Only the form column and its footer swap;
+   the mascot panel and header stay put. The new form rises in from a short
+   offset with blur, the old one lifts away — same language as dialogs.
+   During a theme switch these groups just cross-fade with the root. */
+.auth-swap { view-transition-name: auth-form; }
+.auth-swap-footer { view-transition-name: auth-footer; }
+
+::view-transition-group(auth-form),
+::view-transition-group(auth-footer) {
+    animation-duration: 460ms;
+    animation-timing-function: var(--ease-damped-expand);
+}
+html:not(.theme-switching)::view-transition-old(auth-form),
+html:not(.theme-switching)::view-transition-old(auth-footer) {
+    animation: auth-swap-out 220ms var(--ease-damped-collapse) both;
+}
+html:not(.theme-switching)::view-transition-new(auth-form),
+html:not(.theme-switching)::view-transition-new(auth-footer) {
+    animation: auth-swap-in 460ms var(--ease-damped-expand) 80ms both;
+}
+html.theme-switching::view-transition-old(auth-form),
+html.theme-switching::view-transition-new(auth-form),
+html.theme-switching::view-transition-old(auth-footer),
+html.theme-switching::view-transition-new(auth-footer) {
+    animation-duration: 240ms;
+    animation-timing-function: ease-out;
+}
+
+@keyframes auth-swap-out {
+    to {
+        opacity: 0;
+        filter: blur(4px);
+        transform: translate3d(0, -8px, 0) scale(0.98);
+    }
+}
+@keyframes auth-swap-in {
+    from {
+        opacity: 0;
+        filter: blur(4px);
+        transform: translate3d(0, 14px, 0) scale(0.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation: none !important;
+    }
+}

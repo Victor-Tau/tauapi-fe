@@ -1,0 +1,124 @@
+<!doctype html>
+<!--
+  注册验证码邮件 demo — 风格：暖白、轻盈、欢迎感（Blip 开心表情）。
+  占位：MLTVRS → {{SystemName}}，482915 → {{Code}}，10 → {{Minutes}}。
+  邮件客户端兼容：表格布局 + 内联样式。注意 Gmail / Outlook 不渲染内嵌 SVG，
+  正式发送时请把下方 Blip 的 <svg> 换成同尺寸 PNG（<img width="88" height="88">）。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>验证你的邮箱 · MLTVRS</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f3f3f0;-webkit-font-smoothing:antialiased;">
+    <!-- 预览文本：收件箱列表里显示在标题后 -->
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+      你的注册验证码是 482915，10 分钟内有效。
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f3f0;">
+      <tr>
+        <td align="center" style="padding:48px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+            style="max-width:520px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#1c1b18;">
+
+            <!-- 品牌 -->
+            <tr>
+              <td align="center" style="padding:0 0 24px;font-size:13px;font-weight:600;letter-spacing:3px;color:#858177;">
+                MLTVRS
+              </td>
+            </tr>
+
+            <!-- 卡片 -->
+            <tr>
+              <td style="background:#ffffff;border:1px solid #e9e8e4;border-radius:24px;padding:48px 40px 40px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <!-- Blip：开心表情，静态 -->
+                  <tr>
+                    <td align="center" style="padding-bottom:28px;">
+                      <svg width="88" height="88" viewBox="20 20 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M 62,20 H 178 C 202,20 220,38 220,62 V 178 C 220,202 202,220 178,220 H 62 C 38,220 20,202 20,178 V 62 C 20,38 38,20 62,20 Z" fill="#e9e8e4"/>
+                        <g transform="translate(-5, 4)" stroke-linejoin="round" stroke-linecap="round">
+                          <g transform="translate(15, -12)" opacity="0.32">
+                            <path d="M 76 70 H 100 V 84 H 140 V 70 H 164 V 98 H 180 V 140 H 164 V 170 H 138 V 152 H 102 V 170 H 76 V 140 H 60 V 98 H 76 Z" fill="#858177" stroke="#858177" stroke-width="18"/>
+                          </g>
+                          <g transform="translate(7.5, -6)" opacity="0.5">
+                            <path d="M 76 70 H 100 V 84 H 140 V 70 H 164 V 98 H 180 V 140 H 164 V 170 H 138 V 152 H 102 V 170 H 76 V 140 H 60 V 98 H 76 Z" fill="#57544d" stroke="#57544d" stroke-width="18"/>
+                          </g>
+                          <path d="M 76 70 H 100 V 84 H 140 V 70 H 164 V 98 H 180 V 140 H 164 V 170 H 138 V 152 H 102 V 170 H 76 V 140 H 60 V 98 H 76 Z" fill="#1c1b18" stroke="#1c1b18" stroke-width="18"/>
+                          <g fill="none" stroke="#e9e8e4">
+                            <path d="M 76 73 Q 86 68 95 73" stroke-width="3.5"/>
+                            <path d="M 76 135 Q 84 141 92 137" stroke-width="4"/>
+                            <path d="M 148 137 Q 156 141 164 135" stroke-width="4"/>
+                            <path d="M 104 144 Q 120 155 136 144" stroke-width="4.5"/>
+                          </g>
+                          <g fill="none" stroke="#fcfcfb" stroke-width="5.5">
+                            <path d="M 85 118 Q 94 105 103 118"/>
+                            <path d="M 137 118 Q 146 105 155 118"/>
+                          </g>
+                        </g>
+                      </svg>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td align="center" style="font-size:26px;line-height:34px;font-weight:700;letter-spacing:-0.4px;padding-bottom:12px;">
+                      欢迎加入 MLTVRS
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="font-size:15px;line-height:24px;color:#57544d;padding-bottom:32px;">
+                      还差一步就能完成注册。<br />请在注册页面输入下面的验证码：
+                    </td>
+                  </tr>
+
+                  <!-- 验证码：逐位格子 -->
+                  <tr>
+                    <td align="center" style="padding-bottom:16px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td style="width:48px;height:60px;background:#f8f8f6;border:1px solid #e9e8e4;border-radius:12px;text-align:center;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:28px;font-weight:600;color:#1c1b18;">4</td>
+                          <td style="width:8px;"></td>
+                          <td style="width:48px;height:60px;background:#f8f8f6;border:1px solid #e9e8e4;border-radius:12px;text-align:center;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:28px;font-weight:600;color:#1c1b18;">8</td>
+                          <td style="width:8px;"></td>
+                          <td style="width:48px;height:60px;background:#f8f8f6;border:1px solid #e9e8e4;border-radius:12px;text-align:center;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:28px;font-weight:600;color:#1c1b18;">2</td>
+                          <td style="width:20px;text-align:center;color:#c9c6bf;font-size:20px;">·</td>
+                          <td style="width:48px;height:60px;background:#f8f8f6;border:1px solid #e9e8e4;border-radius:12px;text-align:center;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:28px;font-weight:600;color:#1c1b18;">9</td>
+                          <td style="width:8px;"></td>
+                          <td style="width:48px;height:60px;background:#f8f8f6;border:1px solid #e9e8e4;border-radius:12px;text-align:center;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:28px;font-weight:600;color:#1c1b18;">1</td>
+                          <td style="width:8px;"></td>
+                          <td style="width:48px;height:60px;background:#f8f8f6;border:1px solid #e9e8e4;border-radius:12px;text-align:center;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:28px;font-weight:600;color:#1c1b18;">5</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="font-size:13px;line-height:20px;color:#858177;padding-bottom:36px;">
+                      验证码 <strong style="color:#57544d;font-weight:600;">10 分钟</strong>内有效，请勿告诉他人
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="border-top:1px solid #efeeea;padding-top:24px;font-size:13px;line-height:21px;color:#858177;" align="center">
+                      如果你没有注册 MLTVRS，忽略这封邮件即可，<br />不会有任何账号被创建。
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- 页脚 -->
+            <tr>
+              <td align="center" style="padding:28px 16px 0;font-size:12px;line-height:20px;color:#a3a097;">
+                这是一封系统自动发送的邮件，请勿直接回复。<br />
+                © 2026 MLTVRS
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
