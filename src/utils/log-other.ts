@@ -339,21 +339,8 @@ export function costBreakdown(log: UsageLog): CostBreakdown | null {
 
 export type Tone = 'normal' | 'warning' | 'danger'
 
-/** First-token latency: under 5s is normal, under 10s slow, beyond that bad. */
+/** First-token latency: under 10s is normal, under 15s slow, beyond that bad. */
 export function firstTokenTone(ms: number): Tone {
-  if (ms < 5_000) return 'normal'
-  return ms < 10_000 ? 'warning' : 'danger'
-}
-
-/** Whole-call duration, judged by throughput when there is enough output. */
-export function durationTone(log: UsageLog): Tone {
-  const seconds = log.use_time ?? 0
-  const tokens = log.completion_tokens ?? 0
-  if (tokens >= 100 && seconds > 0) {
-    const tps = tokens / seconds
-    if (tps >= 15) return 'normal'
-    return tps >= 5 ? 'warning' : 'danger'
-  }
-  if (seconds < 30) return 'normal'
-  return seconds < 60 ? 'warning' : 'danger'
+  if (ms < 10_000) return 'normal'
+  return ms < 15_000 ? 'warning' : 'danger'
 }

@@ -50,6 +50,11 @@
     --color-success-text: var(--success-text);
     --color-warning-text: var(--warning-text);
     --color-info-text: var(--info-text);
+    --color-data-input: var(--data-input);
+    --color-latency-good: var(--latency-good);
+    --color-data-output: var(--data-output);
+    --color-data-cache-read: var(--data-cache-read);
+    --color-data-cache-write: var(--data-cache-write);
     --color-row-alt: var(--row-alt);
     --color-success-bg: var(--success-bg);
     --color-success-border: var(--success-border);
@@ -211,6 +216,15 @@
     --warning-border: var(--status-warning-border);
     /* Secondary data accent (output tokens, cache) beside success green. */
     --info-text: var(--accent-link);
+    /* Token series in call details: four quiet, equally light hues that sit
+       on the warm neutrals (input matches the dashboard's blue, output its
+       green). Low chroma so a column of figures never shouts. */
+    --data-input: #2849a0;
+    --data-output: #267347;
+    --data-cache-read: #8a621a;
+    --data-cache-write: #823a73;
+    /* A healthy latency: a pale green, quieter than the status green. */
+    --latency-good: #5e9a74;
     --link: var(--accent-link);
     --link-hover: var(--accent-link-hover);
     --starlight: var(--accent-starlight);
@@ -313,6 +327,11 @@
     --warning: #f0b43c;
     --warning-text: #f3c56b;
     --info-text: #8ea2ff;
+    --data-input: #84a1e2;
+    --data-output: #7acb95;
+    --data-cache-read: #dbb26a;
+    --data-cache-write: #d18ac2;
+    --latency-good: #8cc9a0;
     --primary-hover: #d9d9d9;
     --danger-bg: rgba(240, 104, 104, 0.12);
     --danger-border: rgba(240, 104, 104, 0.28);

@@ -47,11 +47,13 @@ export function StatCard({
   )
 }
 
+// Muted tiles drawn from the token data palette (index.css --data-*), so the
+// cards and the call table read as one set of colours.
 const ICON_TONE = {
-  mint: "bg-success/10 text-success-text",
-  amber: "bg-warning/12 text-warning-text",
-  blue: "bg-info-text/10 text-info-text",
-  violet: "bg-violet-500/10 text-violet-600 dark:text-violet-300",
+  slate: "bg-data-input/12 text-data-input",
+  sage: "bg-data-output/12 text-data-output",
+  sand: "bg-data-cache-read/14 text-data-cache-read",
+  mauve: "bg-data-cache-write/12 text-data-cache-write",
 } as const
 
 /**

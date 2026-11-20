@@ -2,7 +2,6 @@ import { createContext, useContext, useMemo, useState } from "react"
 import {
   ChevronRightIcon,
   CopyIcon,
-  LayersIcon,
   RotateCwIcon,
   SearchIcon,
   SearchXIcon,
@@ -10,11 +9,14 @@ import {
 import { useSearchParams } from "react-router"
 import { toast } from "sonner"
 
-import cnGroupIcon from "@/assets/group-cn.svg?raw"
-
 import { ErrorAlert } from "@/components/error-alert"
 import { ModelsBodySkeleton } from "@/components/route-skeleton"
-import { hasModelIcon, ModelIcon, modelBrand } from "@/components/model-icon"
+import {
+  GroupIcon,
+  groupVendorIcon,
+  type GroupVendorIcon,
+} from "@/components/group-icon"
+import { hasModelIcon, ModelIcon } from "@/components/model-icon"
 import { PageHeading } from "@/components/page-heading"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -90,14 +92,14 @@ const HEALTH_LABEL: Record<Health, string> = {
   idle: "暂无调用",
 }
 const HEALTH_TEXT: Record<Health, string> = {
-  ok: "text-success",
-  degraded: "text-warning",
+  ok: "text-latency-good",
+  degraded: "text-warning-text",
   failing: "text-destructive",
   idle: "text-muted-foreground",
 }
 const HEALTH_FILL: Record<Health, string> = {
-  ok: "bg-success",
-  degraded: "bg-warning",
+  ok: "bg-latency-good",
+  degraded: "bg-warning-text",
   failing: "bg-destructive",
   idle: "bg-nav-active",
 }
@@ -155,11 +157,6 @@ function ratioBadgeText(ratio: number, digits: number): string | null {
   return null
 }
 
-/** Hand-picked marks for named groups; others use their models' vendor. */
-const GROUP_ICONS: Record<string, string> = {
-  国模: cnGroupIcon,
-}
-
 interface GroupEntry {
   name: string
   /** Server description when set, else the group name. */
@@ -174,7 +171,7 @@ interface GroupEntry {
   models: PricingModel[]
   health: Health
   /** Shared by every model in the group; mixed groups get a generic mark. */
-  icon: { model: string; vendor: PricingVendor | undefined } | null
+  icon: GroupVendorIcon
 }
 
 export default function ModelsPage() {
@@ -223,12 +220,6 @@ export default function ModelsPage() {
             (worst, h) => (HEALTH_RANK[h] > HEALTH_RANK[worst] ? h : worst),
             "idle"
           )
-        const vendorOf = (m: PricingModel) => vendorsById.get(m.vendor_id ?? -1)
-        const brands = new Set(
-          models.map((m) => modelBrand(m.model_name, vendorOf(m)))
-        )
-        const [first] = models
-        const shared = brands.size === 1 && !brands.has(null)
         const parts = groupRatioParts(catalog, name)
         return {
           name,
@@ -239,9 +230,7 @@ export default function ModelsPage() {
           usable: name in catalog.usable_group,
           models,
           health,
-          icon: shared
-            ? { model: first.model_name, vendor: vendorOf(first) }
-            : null,
+          icon: groupVendorIcon(models, vendorsById),
         }
       })
       .sort(
@@ -505,24 +494,11 @@ function GroupNav({
                 )}
               >
                 <span className="flex size-6 shrink-0 items-center justify-center">
-                  {GROUP_ICONS[group.name] ? (
-                    <span
-                      aria-hidden="true"
-                      className="inline-flex size-5 [&>svg]:size-full"
-                      // Bundled static asset, not user data.
-                      dangerouslySetInnerHTML={{
-                        __html: GROUP_ICONS[group.name],
-                      }}
-                    />
-                  ) : group.icon ? (
-                    <ModelIcon
-                      model={group.icon.model}
-                      vendor={group.icon.vendor}
-                      className="size-[18px]"
-                    />
-                  ) : (
-                    <LayersIcon className="size-[18px]" aria-hidden="true" />
-                  )}
+                  <GroupIcon
+                    name={group.name}
+                    icon={group.icon}
+                    className="size-[18px]"
+                  />
                 </span>
                 <span className="min-w-0 flex-1 truncate">{group.label}</span>
                 <span className="min-w-12 shrink-0 text-right font-mono text-xs text-muted-foreground tabular-nums">

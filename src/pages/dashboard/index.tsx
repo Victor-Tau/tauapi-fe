@@ -290,6 +290,7 @@ export default function DashboardPage() {
                 index={2}
                 title="接入兼容 SDK"
                 body="在服务端配置密钥和调用地址。"
+                note="注意：某些客户端(如cc switch)，填写时端点需要去掉/v1 ！"
               >
                 <EndpointField label="调用地址" url={SDK_BASE_URL} />
               </QuickStep>
@@ -314,11 +315,13 @@ function QuickStep({
   index,
   title,
   body,
+  note,
   children,
 }: {
   index: number
   title: string
   body: string
+  note?: string
   children: React.ReactNode
 }) {
   return (
@@ -330,6 +333,7 @@ function QuickStep({
         <div className="flex flex-col gap-0.5">
           <span className="font-medium">{title}</span>
           <span className="text-muted-foreground">{body}</span>
+          {note && <span className="text-[#D08A2A]">{note}</span>}
         </div>
         {children}
       </div>

@@ -217,7 +217,7 @@ export default function UsagePage() {
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           <IconStatCard
             icon={WalletIcon}
-            tone="blue"
+            tone="slate"
             label="时段消耗额度"
             value={formatQuota(stat.data?.quota, config)}
             caption={period}
@@ -225,7 +225,7 @@ export default function UsagePage() {
           />
           <IconStatCard
             icon={ActivityIcon}
-            tone="violet"
+            tone="mauve"
             label="成功请求数"
             value={
               sums ? `${formatNumber(sums.requests)}${partial ? "+" : ""}` : "—"
@@ -235,7 +235,7 @@ export default function UsagePage() {
           />
           <IconStatCard
             icon={FileTextIcon}
-            tone="mint"
+            tone="sage"
             label="总 Token"
             value={
               sums ? formatTokens(sums.inputTokens + sums.outputTokens) : "—"
@@ -249,9 +249,9 @@ export default function UsagePage() {
           />
           <IconStatCard
             icon={DatabaseIcon}
-            tone="amber"
+            tone="sand"
             label="缓存 Token"
-            value={sums ? formatTokens(sums.cacheReadTokens) : "—"}
+            value={sums ? formatTokens(sums.cacheReadTokens, 1) : "—"}
             caption={
               partial
                 ? `仅统计前 ${formatNumber(sums?.requests)} 条`
@@ -389,10 +389,7 @@ export default function UsagePage() {
                   {columns.map((column) => (
                     <TableHead
                       key={column.id}
-                      className={cn(
-                        column.align === "right" && "text-right",
-                        column.align === "center" && "text-center"
-                      )}
+                      className={cn(column.align === "right" && "text-right")}
                     >
                       {column.label}
                     </TableHead>
@@ -415,8 +412,7 @@ export default function UsagePage() {
                         key={column.id}
                         className={cn(
                           "py-3",
-                          column.align === "right" && "text-right",
-                          column.align === "center" && "text-center"
+                          column.align === "right" && "text-right"
                         )}
                       >
                         {column.cell(log, context)}

@@ -32,12 +32,16 @@ const tokenFixed = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, ma
  * from a million on in M (875,512,000 → 875.51M), from a billion on in B
  * (5,842,440,000 → 5.84B).
  */
-export function formatTokens(value: number | null | undefined): string {
+/** Cache figures are secondary and keep 1 decimal. */
+const tokenFixed1 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+export function formatTokens(value: number | null | undefined, decimals: 1 | 2 = 2): string {
   if (value == null || !Number.isFinite(value)) return '—'
-  if (Math.abs(value) >= 1_000_000_000) return `${tokenFixed.format(value / 1_000_000_000)}B`
-  if (Math.abs(value) >= 1_000_000) return `${tokenFixed.format(value / 1_000_000)}M`
-  if (Math.abs(value) >= 1000) return `${tokenFixed.format(value / 1000)}K`
-  return Number.isInteger(value) ? whole.format(value) : tokenFixed.format(value)
+  const fixed = decimals === 1 ? tokenFixed1 : tokenFixed
+  if (Math.abs(value) >= 1_000_000_000) return `${fixed.format(value / 1_000_000_000)}B`
+  if (Math.abs(value) >= 1_000_000) return `${fixed.format(value / 1_000_000)}M`
+  if (Math.abs(value) >= 1000) return `${fixed.format(value / 1000)}K`
+  return Number.isInteger(value) ? whole.format(value) : fixed.format(value)
 }
 
 export interface QuotaDisplay {
@@ -112,10 +116,13 @@ export function formatMs(ms: number | null | undefined): string {
   return ms < 1000 ? `${whole.format(Math.round(ms))} ms` : `${formatNumber(ms / 1000)} s`
 }
 
-/** Durations in seconds: "17 s" below a minute, "1.600 min" above. */
+/** Fixed two decimals for minute durations. */
+const minutesFixed = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+/** Durations in seconds: "95 s" up to two minutes, "2.35 min" beyond. */
 export function formatSeconds(seconds: number | null | undefined): string {
   if (seconds == null || !Number.isFinite(seconds)) return '—'
-  return seconds < 60 ? `${formatNumber(seconds)} s` : `${formatNumber(seconds / 60)} min`
+  return seconds <= 120 ? `${formatNumber(seconds)} s` : `${minutesFixed.format(seconds / 60)} min`
 }
 
 /**

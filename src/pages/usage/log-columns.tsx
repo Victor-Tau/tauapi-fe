@@ -42,7 +42,6 @@ import {
 } from "@/utils/format"
 import {
   costBreakdown,
-  durationTone,
   firstTokenMs,
   firstTokenTone,
   isWebSearch,
@@ -59,14 +58,16 @@ export interface CellContext {
 export interface LogColumn {
   id: string
   label: string
-  align?: "left" | "center" | "right"
+  /** Text and badges sit left, figures right; header follows the cells. */
+  align?: "left" | "right"
   /** Shown until the user changes the column set. */
   defaultVisible: boolean
   cell: (log: UsageLog, context: CellContext) => ReactNode
 }
 
+// Latency: pale green when healthy, amber when slow, red when bad.
 const TONE_TEXT: Record<Tone, string> = {
-  normal: "text-success-text",
+  normal: "text-latency-good",
   warning: "text-warning-text",
   danger: "text-destructive",
 }
@@ -90,21 +91,23 @@ export function formatLogTime(seconds: number): string {
 
 const muted = <span className="text-muted-foreground">—</span>
 
-/** A small ⓘ next to a figure; hover or focus shows the breakdown. */
 /** One line of a breakdown. `summary` rows close the breakdown. */
 export interface DetailRow {
   label: string
   value: string
-  /** accent = prices and totals of note (blue); success = amount charged. */
-  tone?: "accent" | "success"
+  /** Token series colour, or muted for secondary facts (prices, ratio). */
+  tone?: "input" | "output" | "cacheRead" | "cacheWrite" | "muted"
   summary?: boolean
   /** Value right after the label instead of right-aligned (single facts). */
   inline?: boolean
 }
 
-const ROW_TONE: Record<NonNullable<DetailRow["tone"]>, string> = {
-  accent: "text-info-text",
-  success: "text-success-text",
+export const ROW_TONE: Record<NonNullable<DetailRow["tone"]>, string> = {
+  input: "text-data-input",
+  output: "text-data-output",
+  cacheRead: "text-data-cache-read",
+  cacheWrite: "text-data-cache-write",
+  muted: "text-muted-foreground",
 }
 
 /** Label/value line shared by the tooltips and the detail sheet. */
@@ -153,7 +156,7 @@ function InfoTip({
           <button
             type="button"
             aria-label={label}
-            className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-info-text/70 outline-none hover:text-info-text focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         }
       >
@@ -194,17 +197,24 @@ export function tokenRows(log: UsageLog): DetailRow[] {
   const tokens = tokenBreakdown(log)
   if (!tokens) return []
   return [
-    { label: "普通输入 Token", value: formatTokens(tokens.normalInput) },
-    { label: "输出 Token", value: formatTokens(tokens.output) },
-    { label: "缓存读取 Token", value: formatTokens(tokens.cacheRead) },
-    { label: "缓存写入 Token", value: formatTokens(tokens.cacheWrite) },
-    // The total is shown exactly, the parts compactly.
     {
-      label: "总 Token",
-      value: formatNumber(tokens.total),
-      tone: "accent",
-      summary: true,
+      label: "普通输入 Token",
+      value: formatTokens(tokens.normalInput),
+      tone: "input",
     },
+    { label: "输出 Token", value: formatTokens(tokens.output), tone: "output" },
+    {
+      label: "缓存读取 Token",
+      value: formatTokens(tokens.cacheRead, 1),
+      tone: "cacheRead",
+    },
+    {
+      label: "缓存写入 Token",
+      value: formatTokens(tokens.cacheWrite, 1),
+      tone: "cacheWrite",
+    },
+    // The total is shown exactly, the parts compactly.
+    { label: "总 Token", value: formatNumber(tokens.total), summary: true },
   ]
 }
 
@@ -212,7 +222,6 @@ export function tokenRows(log: UsageLog): DetailRow[] {
 const WEB_SEARCH_ROW: DetailRow = {
   label: "openai联网搜索",
   value: "0.01元/次",
-  tone: "accent",
   inline: true,
 }
 
@@ -238,21 +247,21 @@ export function billingRows(
     rows.push({
       label: "单次价格",
       value: formatMoney(cost.callPrice, config),
-      tone: "accent",
     })
   } else if (cost?.inputPrice != null) {
     const price = (usd: number | undefined) => formatUnitPrice(usd, config)
     rows.push(
+      // Money stays in the text colour; unit prices are secondary.
       { label: "输入费用", value: formatMoney(cost.inputFee, config) },
       { label: "输出费用", value: formatMoney(cost.outputFee, config) },
-      { label: "输入单价", value: price(cost.inputPrice), tone: "accent" },
-      { label: "输出单价", value: price(cost.outputPrice), tone: "accent" },
+      { label: "输入单价", value: price(cost.inputPrice), tone: "muted" },
+      { label: "输出单价", value: price(cost.outputPrice), tone: "muted" },
       { label: "缓存读取费用", value: formatMoney(cost.cacheReadFee, config) },
       { label: "缓存写入费用", value: formatMoney(cost.cacheWriteFee, config) },
       {
         label: "缓存写入单价",
         value: price(cost.cacheWritePrice),
-        tone: "accent",
+        tone: "muted",
       }
     )
   }
@@ -260,7 +269,7 @@ export function billingRows(
     rows.push({
       label: "计费档位",
       value: cost.tierLabel,
-      tone: "accent",
+      tone: "muted",
       summary: true,
     })
   }
@@ -268,15 +277,16 @@ export function billingRows(
     rows.push({
       label: "倍率",
       value: `${cost.ratio.toFixed(2)}x`,
-      tone: "accent",
+      tone: "muted",
       summary: true,
     })
   }
-  rows.push({ label: "总费用", value: total, tone: "success", summary: true })
+  rows.push({ label: "总费用", value: total, summary: true })
   if (totalUsd != null && cost?.ratio != null && cost.ratio > 0) {
     rows.push({
       label: "标准费用",
       value: formatMoney(totalUsd / cost.ratio, config),
+      tone: "muted",
       summary: true,
     })
   }
@@ -286,7 +296,7 @@ export function billingRows(
 function TransportBadges({ log }: { log: UsageLog }) {
   if (isWebSearch(log)) {
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex items-center">
         <Badge variant="warning" className="font-mono">
           SEARCH
         </Badge>
@@ -298,11 +308,12 @@ function TransportBadges({ log }: { log: UsageLog }) {
   const detail =
     stream?.end_error ?? stream?.errors?.[0] ?? stream?.end_reason ?? undefined
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center gap-1">
       {log.other?.ws && <Badge variant="neutral">WS</Badge>}
       {log.is_stream ? (
         <Badge
-          variant={streamFailed ? "danger" : "success"}
+          // Streaming is the norm; only a broken stream earns colour.
+          variant={streamFailed ? "danger" : "neutral"}
           title={streamFailed && detail ? `流异常：${detail}` : undefined}
         >
           SSE
@@ -370,7 +381,6 @@ export const LOG_COLUMNS: LogColumn[] = [
   {
     id: "effort",
     label: "推理强度",
-    align: "center",
     defaultVisible: false,
     cell: (log) =>
       log.other?.reasoning_effort ? (
@@ -382,7 +392,7 @@ export const LOG_COLUMNS: LogColumn[] = [
   {
     id: "path",
     label: "端点",
-    defaultVisible: false,
+    defaultVisible: true,
     cell: (log) =>
       log.other?.request_path ? (
         <span className="font-mono text-[13px]">{log.other.request_path}</span>
@@ -393,8 +403,7 @@ export const LOG_COLUMNS: LogColumn[] = [
   {
     id: "transport",
     label: "传输",
-    align: "center",
-    defaultVisible: true,
+    defaultVisible: false,
     cell: (log) => <TransportBadges log={log} />,
   },
   {
@@ -409,17 +418,17 @@ export const LOG_COLUMNS: LogColumn[] = [
       const write = tokens.cacheWrite
       return (
         <div className="flex items-center justify-end gap-1.5">
-          <div className="flex flex-col items-end gap-0.5 font-mono text-[13px] tabular-nums">
-            <span className="flex items-center gap-2.5">
+          <div className="flex flex-col items-end gap-0.5 font-mono tabular-nums">
+            <span className="flex items-center gap-2 text-[13px] font-bold">
               <span
-                className="inline-flex items-center gap-0.5 text-success-text"
+                className="inline-flex items-center gap-0.5 text-data-input"
                 title="普通输入"
               >
                 <ArrowDownIcon className="size-3.5" />
                 {formatTokens(tokens.normalInput)}
               </span>
               <span
-                className="inline-flex items-center gap-0.5 text-info-text"
+                className="inline-flex items-center gap-0.5 text-data-output"
                 title="输出"
               >
                 <ArrowUpIcon className="size-3.5" />
@@ -427,16 +436,23 @@ export const LOG_COLUMNS: LogColumn[] = [
               </span>
             </span>
             {(read > 0 || write > 0) && (
-              <span
-                className="inline-flex items-center gap-1 text-info-text"
-                title="缓存读取 / 写入"
-              >
-                <DatabaseIcon className="size-3" />
-                {formatTokens(read)}
+              <span className="flex items-center gap-2 text-xs font-semibold">
+                {read > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 text-data-cache-read"
+                    title="缓存读取"
+                  >
+                    <DatabaseIcon className="size-3" />
+                    {formatTokens(read, 1)}
+                  </span>
+                )}
                 {write > 0 && (
-                  <span className="inline-flex items-center gap-0.5">
+                  <span
+                    className="inline-flex items-center gap-1 text-data-cache-write"
+                    title="缓存写入"
+                  >
                     <SaveIcon className="size-3" />
-                    {formatTokens(write)}
+                    {formatTokens(write, 1)}
                   </span>
                 )}
               </span>
@@ -491,12 +507,8 @@ export const LOG_COLUMNS: LogColumn[] = [
           {log.use_time != null && (
             <span>
               <span className="text-muted-foreground">总耗时 </span>
-              <span
-                className={cn(
-                  "font-mono text-[13px] font-semibold",
-                  TONE_TEXT[durationTone(log)]
-                )}
-              >
+              {/* Total time is plain text; only TTFT is colour-coded. */}
+              <span className="font-mono text-[13px] font-semibold text-foreground">
                 {formatSeconds(log.use_time)}
               </span>
             </span>
@@ -509,14 +521,14 @@ export const LOG_COLUMNS: LogColumn[] = [
     id: "speed",
     label: "速率",
     align: "right",
-    defaultVisible: false,
+    defaultVisible: true,
     cell: (log) => {
       const tps = outputTokensPerSecond(log)
       return tps == null ? (
         muted
       ) : (
         <span className="font-mono text-[13px] font-semibold tabular-nums">
-          {formatTokens(tps)}
+          {formatNumber(Math.round(tps))}
           <span className="ml-1 text-xs font-normal text-muted-foreground">
             tok/s
           </span>
@@ -588,7 +600,7 @@ export function ViewButton({
 }
 
 // Versioned: a new default column set should reach people who had saved one.
-const STORAGE_KEY = "api-console-usage-columns-v2"
+const STORAGE_KEY = "api-console-usage-columns-v3"
 const DEFAULT_VISIBLE = LOG_COLUMNS.filter((c) => c.defaultVisible).map(
   (c) => c.id
 )

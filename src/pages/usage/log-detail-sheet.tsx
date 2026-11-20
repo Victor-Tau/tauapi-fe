@@ -11,7 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import type { SiteStatus, UsageLog } from "@/types/api"
-import { formatMs, formatSeconds, formatTokens } from "@/utils/format"
+import { formatMs, formatNumber, formatSeconds } from "@/utils/format"
 import { firstTokenMs, outputTokensPerSecond } from "@/utils/log-other"
 
 import {
@@ -19,18 +19,17 @@ import {
   billingSourceLabel,
   type DetailRow,
   formatLogTime,
+  ROW_TONE,
   tokenRows,
 } from "./log-columns"
 
 type Row = [string, ReactNode]
 
-const TONE_TEXT = { accent: "text-info-text", success: "text-success-text" }
-
 /** Breakdown rows keep their colour coding in the sheet. */
 function toRow(row: DetailRow): Row {
   return [
     row.label,
-    <span className={cn("font-mono", row.tone && TONE_TEXT[row.tone])}>
+    <span className={cn("font-mono", row.tone && ROW_TONE[row.tone])}>
       {row.value}
     </span>,
   ]
@@ -152,7 +151,9 @@ export function LogDetailSheet({
                 ],
                 [
                   "输出速率",
-                  tps != null ? `${formatTokens(tps)} tok/s` : undefined,
+                  tps != null
+                    ? `${formatNumber(Math.round(tps))} tok/s`
+                    : undefined,
                 ],
                 [
                   "流状态",

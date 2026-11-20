@@ -30,6 +30,11 @@ import {
 import { ApiError, errorMessage } from "@/api/errors"
 import { DataPagination, pageCountOf } from "@/components/data-pagination"
 import { ErrorAlert } from "@/components/error-alert"
+import {
+  GroupIcon,
+  useGroupVendorIcons,
+  type GroupVendorIcon,
+} from "@/components/group-icon"
 import { PageHeading } from "@/components/page-heading"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -79,6 +84,7 @@ import {
 import {
   KEYS_PAGE_SIZE,
   useKeys,
+  usePricing,
   useSelfGroups,
   useSiteStatus,
 } from "@/hooks/use-queries"
@@ -124,6 +130,8 @@ export default function KeysPage() {
   const keys = useKeys(page, KEYS_PAGE_SIZE)
   const site = useSiteStatus()
   const groups = useSelfGroups()
+  const pricing = usePricing()
+  const groupIcons = useGroupVendorIcons(pricing.data)
   const items = keys.data?.items ?? []
   const total = keys.data?.total ?? 0
   const pageCount = pageCountOf(total, keys.data?.page_size || KEYS_PAGE_SIZE)
@@ -342,6 +350,7 @@ export default function KeysPage() {
                         <GroupSelect
                           token={token}
                           groups={groups.data}
+                          icons={groupIcons}
                           disabled={busy || !canEditKey(token)}
                           onChange={(group) => regroup.mutate({ token, group })}
                         />
@@ -470,18 +479,28 @@ export default function KeysPage() {
 function GroupSelect({
   token,
   groups,
+  icons,
   disabled,
   onChange,
 }: {
   token: ModelApiToken
   groups: UserGroups | undefined
+  icons: Map<string, GroupVendorIcon>
   disabled: boolean
   onChange: (group: string) => void
 }) {
   const current = token.group || null
   const names = Object.keys(groups ?? {})
   if (current && !names.includes(current)) names.unshift(current)
-  const items = names.map((name) => ({ label: name, value: name }))
+  const items = names.map((name) => ({
+    label: (
+      <>
+        <GroupIcon name={name} icon={icons.get(name)} />
+        <span>{name}</span>
+      </>
+    ),
+    value: name,
+  }))
 
   return (
     <Select
@@ -502,10 +521,10 @@ function GroupSelect({
       <SelectContent className="w-auto">
         <SelectGroup>
           {names.map((name) => {
-            const desc = groups?.[name]?.desc
             return (
               <SelectItem key={name} value={name}>
-                {desc ? `${name} · ${desc}` : name}
+                <GroupIcon name={name} icon={icons.get(name)} />
+                <span>{name}</span>
               </SelectItem>
             )
           })}

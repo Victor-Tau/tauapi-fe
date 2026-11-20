@@ -21,7 +21,7 @@ npm run dev        # http://127.0.0.1:5174
 
 ## 后端代理
 
-开发环境下 `/api` 由 Vite 代理到 `API_PROXY_TARGET`（见 `.env.development`，默认 `http://43.173.126.193:3000`）。该变量只在 `vite.config.ts` 中读取，不会打包进前端代码。临时指向其他后端：
+开发环境下 `/api` 由 Vite 代理到 `API_PROXY_TARGET`（见 `.env.development`，默认 `http://70.39.180.109:3000`）。该变量只在 `vite.config.ts` 中读取，不会打包进前端代码。临时指向其他后端：
 
 ```bash
 API_PROXY_TARGET=http://localhost:3000 npm run dev

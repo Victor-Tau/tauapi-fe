@@ -49,8 +49,8 @@ import {
 } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
-import { ModelIcon } from "@/components/model-icon"
-import { useSelfGroups, useUserModels } from "@/hooks/use-queries"
+import { GroupIcon, useGroupVendorIcons } from "@/components/group-icon"
+import { usePricing, useSelfGroups, useUserModels } from "@/hooks/use-queries"
 import { keyFormSchema } from "@/lib/key-form-schema"
 import { queryKeys } from "@/lib/query"
 import type { ModelApiToken } from "@/types/api"
@@ -113,6 +113,8 @@ function KeyForm({
   const queryClient = useQueryClient()
   const groups = useSelfGroups()
   const models = useUserModels()
+  const pricing = usePricing()
+  const groupIcons = useGroupVendorIcons(pricing.data)
 
   const groupNames = useMemo(
     () => Object.keys(groups.data ?? {}),
@@ -124,21 +126,17 @@ function KeyForm({
         label: groups.isPending ? "正在加载分组…" : "选择服务器分组",
         value: null,
       },
-      ...groupNames.map((name) => {
-        const desc = groups.data?.[name]?.desc
-        const text = desc ? `${name} · ${desc}` : name
-        return {
-          label: (
-            <>
-              <ModelIcon model={name} />
-              <span>{text}</span>
-            </>
-          ),
-          value: name,
-        }
-      }),
+      ...groupNames.map((name) => ({
+        label: (
+          <>
+            <GroupIcon name={name} icon={groupIcons.get(name)} />
+            <span>{name}</span>
+          </>
+        ),
+        value: name,
+      })),
     ],
-    [groupNames, groups.data, groups.isPending]
+    [groupNames, groupIcons, groups.isPending]
   )
   const schema = useMemo(() => keyFormSchema(groupNames), [groupNames])
 

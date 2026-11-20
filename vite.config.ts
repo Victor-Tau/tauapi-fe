@@ -12,6 +12,15 @@ export default defineConfig(({ mode }) => {
   const pkg = JSON.parse(
     readFileSync(resolve(import.meta.dirname, "package.json"), "utf8")
   ) as { version: string }
+  // Optional dev HTTPS (needed to test session-cookie refresh from a remote
+  // origin). Point both variables at PEM files kept outside the repo.
+  const https =
+    env.DEV_HTTPS_KEY && env.DEV_HTTPS_CERT
+      ? {
+          key: readFileSync(env.DEV_HTTPS_KEY),
+          cert: readFileSync(env.DEV_HTTPS_CERT),
+        }
+      : undefined
   return {
     plugins: [react(), tailwindcss()],
     define: {
@@ -26,12 +35,15 @@ export default defineConfig(({ mode }) => {
       host: "0.0.0.0",
       port: 5174,
       strictPort: true,
+      https,
       // Allow access via public IP / domain / tunnel hostnames.
       allowedHosts: true,
       proxy: {
         "/api": {
-          target: env.API_PROXY_TARGET || "http://43.173.126.193:3000",
+          target: env.API_PROXY_TARGET || "http://70.39.180.109:3000",
           changeOrigin: true,
+          // The backend is reached by IP, so its certificate cannot match.
+          secure: !env.API_PROXY_TARGET?.startsWith("https://"),
           timeout: 20_000,
           proxyTimeout: 20_000,
         },

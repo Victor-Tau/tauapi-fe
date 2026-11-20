@@ -3,7 +3,7 @@
 > **用途**：与同目录的 `newapi_frontend_demo_claude_guide.md` 配套，用于开发独立的 React / TypeScript 前端 Demo。  
 > **编写日期**：2026-11-10  
 > **研究基线**：[QuantumNous/new-api](https://github.com/QuantumNous/new-api)，此前分析固定提交 [`bd6bb53019fb7e21804b31ab7365c9b2097f4b6c`](https://github.com/QuantumNous/new-api/tree/bd6bb53019fb7e21804b31ab7365c9b2097f4b6c)；部分字段另与上游 `main` 源码及公开文档交叉核对。  
-> **部署实例**：`http://43.173.126.193:3000`（用户提供，**实例版本和实际回包尚未经本次联网联调确认**）。  
+> **部署实例**：`http://70.39.180.109:3000`（用户提供，**实例版本和实际回包尚未经本次联网联调确认**）。  
 > **测试用户名**：`test1`。**测试密码不要写入本文件、程序、环境变量、终端命令历史或测试日志；由用户在页面内手动输入。**
 
 ## 0. Claude Code 使用规则（先读）
@@ -30,10 +30,10 @@
 
 | 配置 | 值 / 说明 |
 |---|---|
-| 上游 New API | `http://43.173.126.193:3000`；目前公开 HTTP，不提供传输加密 |
+| 上游 New API | `http://70.39.180.109:3000`；目前公开 HTTP，不提供传输加密 |
 | 前端开发地址 | `http://localhost:5173`（Vite） |
 | 前端管理接口 | **相对路径** `/api/...`，由本地 Vite 反向代理转发 |
-| OpenAI 兼容模型接口（未来） | 上游 `http://43.173.126.193:3000/v1`；首版 Demo 不发真实模型请求 |
+| OpenAI 兼容模型接口（未来） | 上游 `http://70.39.180.109:3000/v1`；首版 Demo 不发真实模型请求 |
 | 管理 API 鉴权 | `Authorization: Bearer <管理 JWT>` |
 | 模型 API 鉴权 | `Authorization: Bearer sk-<原始模型密钥>` |
 | 请求 Content-Type | 有 JSON 请求体时使用 `application/json` |
@@ -44,8 +44,8 @@
 开发 `.env.local` 示例（只读连接地址，不包含任何密码或密钥）：
 
 ```dotenv
-NEWAPI_PROXY_TARGET=http://43.173.126.193:3000
-VITE_PUBLIC_MODEL_BASE_URL=http://43.173.126.193:3000/v1
+NEWAPI_PROXY_TARGET=http://70.39.180.109:3000
+VITE_PUBLIC_MODEL_BASE_URL=http://70.39.180.109:3000/v1
 ```
 
 Vite 参考配置（`NEWAPI_PROXY_TARGET` **只给 Node 开发进程**，不加 `VITE_` 前缀）：
@@ -75,7 +75,7 @@ export default defineConfig(({ mode }) => {
 
 ```bash
 # 仅示意；请自行替换 SSH 登录用户。此命令不传任何业务密码。
-ssh -N -L 13000:127.0.0.1:3000 <ssh-user>@43.173.126.193
+ssh -N -L 13000:127.0.0.1:3000 <ssh-user>@70.39.180.109
 # 隧道建立后：NEWAPI_PROXY_TARGET=http://127.0.0.1:13000
 ```
 
