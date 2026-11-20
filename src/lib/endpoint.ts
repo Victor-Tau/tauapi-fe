@@ -5,24 +5,8 @@
  */
 export const API_ORIGIN = "https://api.mltvrsai.com"
 
-/** Model API endpoints shown on the dashboard, grouped by protocol. */
-export const MODEL_ENDPOINTS = [
-  {
-    protocol: "OpenAI 兼容",
-    label: "Responses",
-    url: `${API_ORIGIN}/v1/responses`,
-  },
-  {
-    protocol: "OpenAI 兼容",
-    label: "Chat Completions",
-    url: `${API_ORIGIN}/v1/chat/completions`,
-  },
-  {
-    protocol: "Claude 兼容",
-    label: "Messages",
-    url: `${API_ORIGIN}/v1/messages`,
-  },
-] as const
+/** OpenAI/Claude-compatible SDK base URL shown on the dashboard. */
+export const SDK_BASE_URL = `${API_ORIGIN}/v1`
 
 /** Claude Code settings example (~/.claude/settings.json). */
 export const CLAUDE_CODE_SETTINGS = JSON.stringify(

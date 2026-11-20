@@ -259,9 +259,17 @@ export default function KeysPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading title="API 密钥">
-        <Button onClick={openCreate}>
-          <PlusIcon data-icon="inline-start" />
-          创建 API 密钥
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={keys.isFetching}
+          onClick={() => void keys.refetch()}
+        >
+          <RotateCwIcon
+            data-icon="inline-start"
+            className={keys.isFetching ? "animate-spin" : undefined}
+          />
+          {keys.isFetching ? "更新中…" : "刷新列表"}
         </Button>
       </PageHeading>
 
@@ -277,17 +285,9 @@ export default function KeysPage() {
         <CardHeader>
           <CardTitle>你的密钥</CardTitle>
           <CardAction>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={keys.isFetching}
-              onClick={() => void keys.refetch()}
-            >
-              <RotateCwIcon
-                data-icon="inline-start"
-                className={keys.isFetching ? "animate-spin" : undefined}
-              />
-              {keys.isFetching ? "更新中…" : "刷新列表"}
+            <Button size="sm" onClick={openCreate}>
+              <PlusIcon data-icon="inline-start" />
+              创建 API 密钥
             </Button>
           </CardAction>
         </CardHeader>

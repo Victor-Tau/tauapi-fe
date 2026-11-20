@@ -41,7 +41,7 @@ import {
   useSiteStatus,
   useTokenTrend,
 } from "@/hooks/use-queries"
-import { CLAUDE_CODE_SETTINGS, MODEL_ENDPOINTS } from "@/lib/endpoint"
+import { CLAUDE_CODE_SETTINGS, SDK_BASE_URL } from "@/lib/endpoint"
 import { queryKeys } from "@/lib/query"
 import { copyText } from "@/utils/clipboard"
 import { formatNumber, quotaDisplay } from "@/utils/format"
@@ -152,7 +152,7 @@ export default function DashboardPage() {
         />
       )}
 
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))_320px]">
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))_380px]">
         {[
           {
             key: "balance",
@@ -208,7 +208,7 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <Card>
           <CardHeader>
             <CardTitle>用量趋势</CardTitle>
@@ -291,7 +291,7 @@ export default function DashboardPage() {
                 title="接入兼容 SDK"
                 body="在服务端配置密钥和调用地址。"
               >
-                <EndpointList />
+                <EndpointField label="调用地址" url={SDK_BASE_URL} />
               </QuickStep>
               <QuickStep
                 index={3}
@@ -342,42 +342,19 @@ async function copyWithToast(text: string, what: string) {
   else toast.error("无法访问剪贴板，请手动复制。")
 }
 
-/** Model API endpoints grouped by protocol, each copyable (plain-HTTP safe). */
-function EndpointList() {
-  const protocols = [...new Set(MODEL_ENDPOINTS.map((e) => e.protocol))]
-  return (
-    <div className="flex flex-col gap-3">
-      {protocols.map((protocol) => (
-        <div key={protocol} className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">{protocol}</span>
-          {MODEL_ENDPOINTS.filter((e) => e.protocol === protocol).map(
-            (endpoint) => (
-              <EndpointField
-                key={endpoint.url}
-                label={endpoint.label}
-                url={endpoint.url}
-              />
-            )
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function EndpointField({ label, url }: { label: string; url: string }) {
   return (
     <div className="flex min-h-9 min-w-0 items-center gap-1 rounded-lg bg-row-alt py-1.5 pr-1 pl-3">
-      <code className="min-w-0 flex-1 font-mono text-[13px] leading-snug break-all">
+      <code className="min-w-0 flex-1 font-mono text-[13px] leading-snug whitespace-nowrap">
         {url}
       </code>
       <Button
         variant="ghost"
         size="icon-sm"
         className="shrink-0 text-muted-foreground"
-        aria-label={`复制 ${label} 端点`}
+        aria-label={`复制${label}`}
         title={label}
-        onClick={() => void copyWithToast(url, ` ${label} 端点`)}
+        onClick={() => void copyWithToast(url, label)}
       >
         <CopyIcon />
       </Button>

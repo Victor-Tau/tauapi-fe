@@ -155,8 +155,8 @@ function DashboardSkeleton() {
   return (
     <>
       <HeadingSkeleton />
-      <StatSkeletons className="xl:grid-cols-[repeat(3,minmax(0,1fr))_320px]" />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <StatSkeletons className="xl:grid-cols-[repeat(3,minmax(0,1fr))_380px]" />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <Card>
           <CardHeader className="grid-cols-[1fr_auto]">
             <div className="flex flex-col gap-2">

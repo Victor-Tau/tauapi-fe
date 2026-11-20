@@ -5,6 +5,7 @@ import {
   ArrowUpIcon,
   Columns3Icon,
   DatabaseIcon,
+  SaveIcon,
   EyeIcon,
   InfoIcon,
 } from "lucide-react"
@@ -431,8 +432,13 @@ export const LOG_COLUMNS: LogColumn[] = [
                 title="缓存读取 / 写入"
               >
                 <DatabaseIcon className="size-3" />
-                {read > 0 && formatTokens(read)}
-                {write > 0 && ` 写 ${formatTokens(write)}`}
+                {formatTokens(read)}
+                {write > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <SaveIcon className="size-3" />
+                    {formatTokens(write)}
+                  </span>
+                )}
               </span>
             )}
           </div>

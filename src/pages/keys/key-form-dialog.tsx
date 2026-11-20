@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
+import { ModelIcon } from "@/components/model-icon"
 import { useSelfGroups, useUserModels } from "@/hooks/use-queries"
 import { keyFormSchema } from "@/lib/key-form-schema"
 import { queryKeys } from "@/lib/query"
@@ -113,7 +114,10 @@ function KeyForm({
   const groups = useSelfGroups()
   const models = useUserModels()
 
-  const groupNames = useMemo(() => Object.keys(groups.data ?? {}), [groups.data])
+  const groupNames = useMemo(
+    () => Object.keys(groups.data ?? {}),
+    [groups.data]
+  )
   const groupItems = useMemo(
     () => [
       {
@@ -122,7 +126,16 @@ function KeyForm({
       },
       ...groupNames.map((name) => {
         const desc = groups.data?.[name]?.desc
-        return { label: desc ? `${name} · ${desc}` : name, value: name }
+        const text = desc ? `${name} · ${desc}` : name
+        return {
+          label: (
+            <>
+              <ModelIcon model={name} />
+              <span>{text}</span>
+            </>
+          ),
+          value: name,
+        }
       }),
     ],
     [groupNames, groups.data, groups.isPending]
@@ -487,7 +500,9 @@ function ModelPicker({
         <ComboboxList>
           {(model: string) => (
             <ComboboxItem key={model} value={model}>
-              {model === typed && !options.includes(model) && !selected.includes(model)
+              {model === typed &&
+              !options.includes(model) &&
+              !selected.includes(model)
                 ? `添加“${model}”`
                 : model}
             </ComboboxItem>
