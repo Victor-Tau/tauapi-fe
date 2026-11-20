@@ -2,6 +2,7 @@ import { useState } from "react"
 import {
   CopyIcon,
   EyeIcon,
+  FileJsonIcon,
   EyeOffIcon,
   PlusIcon,
   RotateCwIcon,
@@ -23,6 +24,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useAuth } from "@/hooks/use-auth"
 import {
@@ -32,7 +41,7 @@ import {
   useSiteStatus,
   useTokenTrend,
 } from "@/hooks/use-queries"
-import { modelBaseUrl } from "@/lib/endpoint"
+import { CLAUDE_CODE_SETTINGS, MODEL_ENDPOINTS } from "@/lib/endpoint"
 import { queryKeys } from "@/lib/query"
 import { copyText } from "@/utils/clipboard"
 import { formatNumber, quotaDisplay } from "@/utils/format"
@@ -123,7 +132,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeading title={`欢迎回来，${profile?.display_name || profile?.username || "你"}`}>
+      <PageHeading
+        title={`欢迎回来，${profile?.display_name || profile?.username || "你"}`}
+      >
         <Button variant="outline" disabled={fetching} onClick={refresh}>
           <RotateCwIcon
             data-icon="inline-start"
@@ -280,7 +291,14 @@ export default function DashboardPage() {
                 title="接入兼容 SDK"
                 body="在服务端配置密钥和调用地址。"
               >
-                <EndpointField />
+                <EndpointList />
+              </QuickStep>
+              <QuickStep
+                index={3}
+                title="配置 Claude Code"
+                body="写入 ~/.claude/settings.json 即可使用。"
+              >
+                <ClaudeCodeSettingsDialog />
               </QuickStep>
             </ol>
           </CardContent>
@@ -319,30 +337,88 @@ function QuickStep({
   )
 }
 
-/** The model API base URL, copyable (plain-HTTP safe, see utils/clipboard). */
-function EndpointField() {
-  const endpoint = modelBaseUrl()
+async function copyWithToast(text: string, what: string) {
+  if (await copyText(text)) toast.success(`已复制${what}`)
+  else toast.error("无法访问剪贴板，请手动复制。")
+}
+
+/** Model API endpoints grouped by protocol, each copyable (plain-HTTP safe). */
+function EndpointList() {
+  const protocols = [...new Set(MODEL_ENDPOINTS.map((e) => e.protocol))]
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">端点</span>
-      <div className="flex min-h-9 min-w-0 items-center gap-1 rounded-lg bg-row-alt py-1.5 pr-1 pl-3">
-        <code className="min-w-0 flex-1 font-mono text-[13px] leading-snug break-all">
-          {endpoint}
-        </code>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="shrink-0 text-muted-foreground"
-          aria-label="复制端点"
-          onClick={async () => {
-            if (await copyText(endpoint)) toast.success("已复制端点")
-            else toast.error("无法访问剪贴板，请手动复制。")
-          }}
-        >
-          <CopyIcon />
-        </Button>
-      </div>
+    <div className="flex flex-col gap-3">
+      {protocols.map((protocol) => (
+        <div key={protocol} className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">{protocol}</span>
+          {MODEL_ENDPOINTS.filter((e) => e.protocol === protocol).map(
+            (endpoint) => (
+              <EndpointField
+                key={endpoint.url}
+                label={endpoint.label}
+                url={endpoint.url}
+              />
+            )
+          )}
+        </div>
+      ))}
     </div>
+  )
+}
+
+function EndpointField({ label, url }: { label: string; url: string }) {
+  return (
+    <div className="flex min-h-9 min-w-0 items-center gap-1 rounded-lg bg-row-alt py-1.5 pr-1 pl-3">
+      <code className="min-w-0 flex-1 font-mono text-[13px] leading-snug break-all">
+        {url}
+      </code>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="shrink-0 text-muted-foreground"
+        aria-label={`复制 ${label} 端点`}
+        title={label}
+        onClick={() => void copyWithToast(url, ` ${label} 端点`)}
+      >
+        <CopyIcon />
+      </Button>
+    </div>
+  )
+}
+
+/** A Claude Code settings.json example pointing at this API. */
+function ClaudeCodeSettingsDialog() {
+  return (
+    <Dialog>
+      <DialogTrigger
+        render={<Button variant="outline" size="sm" className="self-start" />}
+      >
+        <FileJsonIcon data-icon="inline-start" />
+        查看配置示例
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Claude Code 配置示例</DialogTitle>
+          <DialogDescription>
+            保存为 ~/.claude/settings.json，并将 ANTHROPIC_AUTH_TOKEN 替换为你的
+            API 密钥。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="relative min-h-0 overflow-hidden rounded-lg bg-row-alt">
+          <pre className="max-h-[60svh] overflow-auto p-3 pr-12 font-mono text-[13px] leading-relaxed">
+            {CLAUDE_CODE_SETTINGS}
+          </pre>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="absolute top-1.5 right-1.5 text-muted-foreground"
+            aria-label="复制配置"
+            onClick={() => void copyWithToast(CLAUDE_CODE_SETTINGS, "配置")}
+          >
+            <CopyIcon />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

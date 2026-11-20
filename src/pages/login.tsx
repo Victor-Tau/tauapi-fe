@@ -193,7 +193,7 @@ export default function LoginPage() {
           <FieldGroup className="gap-8">
             <Field>
               <FieldLabel className={AUTH_LABEL} htmlFor="username">
-                用户名或绑定的邮箱
+                用户名
               </FieldLabel>
               <Input
                 id="username"
