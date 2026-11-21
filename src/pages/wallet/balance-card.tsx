@@ -30,9 +30,15 @@ import {
 } from "@/components/ui/table"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useBalanceLogs } from "@/hooks/use-queries"
+import { useSettledKey } from "@/hooks/use-settled-key"
 import { cn } from "@/lib/utils"
 import type { SiteStatus } from "@/types/api"
-import { BALANCE_TYPES, balanceEntry, balanceTypeLabel } from "@/utils/balance"
+import {
+  BALANCE_TYPES,
+  balanceEntry,
+  balanceTypeLabel,
+  isNonBalanceLog,
+} from "@/utils/balance"
 import { formatNumber, formatUnixSeconds } from "@/utils/format"
 import { formatQuotaPrecise } from "@/utils/wallet"
 
@@ -50,8 +56,11 @@ export function BalanceCard({ config }: { config: SiteStatus | undefined }) {
   const [type, setType] = useState(0)
   const [page, setPage] = useState(1)
   const logs = useBalanceLogs({ p: page, page_size: PAGE_SIZE, type })
+  const rowsKey = useSettledKey(`${type}|${page}`, !logs.isPlaceholderData)
   const days = config?.log_max_range_days
   const total = logs.data?.total ?? 0
+  // The server cannot filter these out, so they are dropped per page.
+  const rows = logs.data?.items.filter((log) => !isNonBalanceLog(log)) ?? []
 
   return (
     <Card>
@@ -113,8 +122,18 @@ export function BalanceCard({ config }: { config: SiteStatus | undefined }) {
                   <TableHead className="text-right">余额变化</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {logs.data.items.map((log) => {
+              <TableBody key={rowsKey} className="swap-in">
+                {!rows.length && (
+                  <TableRow className="border-0">
+                    <TableCell
+                      colSpan={4}
+                      className="py-6 text-center text-muted-foreground"
+                    >
+                      本页没有余额变化记录
+                    </TableCell>
+                  </TableRow>
+                )}
+                {rows.map((log) => {
                   const entry = balanceEntry(log, config)
                   return (
                     <TableRow key={log.id} className="border-0 even:bg-row-alt">

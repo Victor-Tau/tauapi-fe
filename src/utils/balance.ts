@@ -85,11 +85,11 @@ function fromMessage(part: LogMessage, config?: SiteStatus): BalanceEntry | null
       // Paid outside the wallet: the balance does not move.
       return { title: '购买订阅', detail: [str(p.plan), str(p.method)].filter(Boolean).join(' · ') || undefined, change: 0 }
     case 'New user sign-up bonus {{quota}}':
-      return { title: '新用户注册奖励', change: quota }
+      return { title: '新用户注册返利', change: quota }
     case 'Invitation code bonus {{quota}}':
-      return { title: '邀请码奖励', change: quota }
+      return { title: '邀请码返利', change: quota }
     case 'Bonus for inviting a user {{quota}}':
-      return { title: '邀请用户奖励', change: quota }
+      return { title: '邀请用户返利', change: quota }
     case 'Daily check-in, received {{quota}}':
       return { title: '每日签到', change: quota }
   }
@@ -112,6 +112,71 @@ function fromOperation(op: LogMessage): BalanceEntry | null {
   return null
 }
 
+export type InvitationBonusKind = 'inviter' | 'invitee'
+
+/** Registration bonus logs: the inviter's reward and the invitee's code bonus. */
+const BONUS_KEYS: Record<string, InvitationBonusKind> = {
+  'Bonus for inviting a user {{quota}}': 'inviter',
+  'Invitation code bonus {{quota}}': 'invitee',
+}
+
+/** English text of system logs written without `content_parts` (older records). */
+const CONTENT_PATTERNS: Array<[RegExp, string, InvitationBonusKind | null]> = [
+  [/^Bonus for inviting a user\s*(.*)$/, '邀请用户返利', 'inviter'],
+  [/^Invitation code bonus\s*(.*)$/, '邀请码返利', 'invitee'],
+  [/^New user sign-up bonus\s*(.*)$/, '新用户注册返利', null],
+  [/^Daily check-in, received\s*(.*)$/, '每日签到', null],
+]
+
+export function invitationBonusKind(log: UsageLog): InvitationBonusKind | null {
+  for (const part of log.other?.content_parts ?? []) {
+    const kind = BONUS_KEYS[part.key]
+    if (kind) return kind
+  }
+  const content = log.content?.trim() ?? ''
+  for (const [pattern, , kind] of CONTENT_PATTERNS) {
+    if (kind && pattern.test(content)) return kind
+  }
+  return null
+}
+
+function fromContent(content: string | undefined, config?: SiteStatus): BalanceEntry | null {
+  const text = content?.trim() ?? ''
+  for (const [pattern, title] of CONTENT_PATTERNS) {
+    const match = pattern.exec(text)
+    if (match) return { title, change: parseFormattedQuota(match[1], config) }
+  }
+  return null
+}
+
+function invitedUser(log: UsageLog): string | undefined {
+  for (const part of log.other?.content_parts ?? []) {
+    const name = str(part.params.username)
+    if (name) return `被邀用户 ${name}`
+  }
+  return undefined
+}
+
+/** Referral earnings, written as top-up logs once actually credited. */
+function fromReferral(log: UsageLog): BalanceEntry | null {
+  const id = log.request_id ?? ''
+  const other = log.other
+  if (id.startsWith('referral-rebate-'))
+    return { title: '邀请充值返利', detail: invitedUser(log), change: other?.referral_rebate_quota ?? (log.quota || null) }
+  if (id.startsWith('invitation-reward-'))
+    return { title: '邀请注册返利', detail: invitedUser(log), change: other?.invitation_reward_quota ?? (log.quota || null) }
+  return null
+}
+
+/**
+ * System logs that never touch the balance (e.g. "Membership changed from
+ * VIP4-… to VIP5-…", written when the VIP level changes). Kept off the bill.
+ */
+export function isNonBalanceLog(log: UsageLog): boolean {
+  if (log.other?.content_parts?.some((part) => part.key.startsWith('Membership changed'))) return true
+  return /^Membership changed\b/.test(log.content?.trim() ?? '')
+}
+
 /** What a log did to the balance, described for the bill. */
 export function balanceEntry(log: UsageLog, config?: SiteStatus): BalanceEntry {
   const model = log.model_name?.trim()
@@ -124,12 +189,16 @@ export function balanceEntry(log: UsageLog, config?: SiteStatus): BalanceEntry {
     case 5:
       return { title: model || '调用失败', detail: '未扣费', change: 0 }
   }
+  const referral = fromReferral(log)
+  if (referral) return referral
   const op = log.other?.op && fromOperation(log.other.op)
   if (op) return op
   for (const part of log.other?.content_parts ?? []) {
     const entry = fromMessage(part, config)
     if (entry) return entry
   }
+  const translated = fromContent(log.content, config)
+  if (translated) return translated
   return {
     title: log.content?.trim() || balanceTypeLabel(log.type),
     change: log.quota ? log.quota : null,

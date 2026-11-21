@@ -23,6 +23,12 @@ export interface SelfProfile {
   vip_level?: number | null
   /** Custom Pebble avatar; null/undefined = the default picked from the user ID. */
   pebble?: PebbleConfig | null
+  /** The user's own affiliate code; empty until generated. */
+  aff_code?: string
+  /** Number of users registered with this account's code. */
+  aff_count?: number
+  /** Total registration bonus earned by inviting users (raw quota). */
+  aff_history_quota?: number
 }
 
 /** A saved Pebble avatar (`users.setting.pebble`); index meanings live in pebble-avatar.tsx. */

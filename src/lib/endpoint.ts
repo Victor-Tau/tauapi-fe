@@ -6,7 +6,7 @@
 export const API_ORIGIN = "https://api.mltvrsai.com"
 
 /** OpenAI/Claude-compatible SDK base URL shown on the dashboard. */
-export const SDK_BASE_URL = `${API_ORIGIN}/v1`
+export const SDK_BASE_URL = API_ORIGIN
 
 /** Claude Code settings example (~/.claude/settings.json). */
 export const CLAUDE_CODE_SETTINGS = JSON.stringify(

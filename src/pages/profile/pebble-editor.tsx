@@ -45,7 +45,7 @@ export function PebbleEditor({
         type="button"
         aria-label="自定义头像"
         title="自定义头像"
-        className="group relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="group press relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setOpen(true)}
       >
         {children}
@@ -91,7 +91,7 @@ function OptionRow({
               aria-checked={selected}
               onClick={() => onChange(index)}
               className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "press inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 selected
                   ? "bg-primary text-primary-foreground"
                   : "bg-(--control-bg) text-foreground hover:bg-(--control-hover)"

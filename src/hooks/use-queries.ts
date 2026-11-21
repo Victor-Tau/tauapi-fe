@@ -22,6 +22,13 @@ import {
   getUserModels,
   getTopUpLink,
 } from "@/api/user"
+import {
+  isAwaitingCredit,
+  getAffCode,
+  getReferralPermissions,
+  listInvitees,
+  listAllRebates,
+} from "@/api/referral"
 import { queryKeys } from "@/lib/query"
 import type { DateRange, UsageLogFilters } from "@/types/api"
 import { growthWindowDays, vipTiers } from "@/utils/vip"
@@ -206,5 +213,42 @@ export function useBalanceLogs(filters: {
     queryKey: queryKeys.balanceLogs(filters),
     queryFn: ({ signal }) => listBalanceLogs(filters, signal),
     placeholderData: keepPreviousData,
+  })
+}
+
+export function useReferralPermissions() {
+  return useQuery({
+    queryKey: queryKeys.referralPermissions,
+    queryFn: ({ signal }) => getReferralPermissions(signal),
+  })
+}
+
+/** Generates a code on the server when the account has none, so only run it then. */
+export function useAffCode(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.affCode,
+    queryFn: ({ signal }) => getAffCode(signal),
+    staleTime: Infinity,
+    enabled,
+  })
+}
+
+export function useInvitees(page: number, pageSize: number, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.invitees(page, pageSize),
+    queryFn: ({ signal }) => listInvitees(page, pageSize, signal),
+    placeholderData: keepPreviousData,
+    enabled,
+  })
+}
+
+/** Every referral earning (rewards and rebates), polled each minute while one awaits credit. */
+export function useAllRebates(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.rebatesAll,
+    queryFn: ({ signal }) => listAllRebates(signal),
+    refetchInterval: (query) =>
+      query.state.data?.items.some(isAwaitingCredit) ? 60_000 : false,
+    enabled,
   })
 }

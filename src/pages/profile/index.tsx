@@ -1,11 +1,10 @@
 import { useState } from "react"
-import { RotateCwIcon } from "lucide-react"
 
 import { PageHeading } from "@/components/page-heading"
+import { RefreshButton } from "@/components/refresh-button"
 import { AvatarFrame } from "@/components/avatar-frame"
 import { PebbleAvatar } from "@/components/pebble-avatar"
 import { ErrorAlert } from "@/components/error-alert"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -44,21 +43,15 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading title="个人资料">
-        <Button
-          variant="outline"
-          disabled={fetching}
-          onClick={() => {
+        <RefreshButton
+          fetching={fetching}
+          label="刷新资料"
+          onRefresh={() => {
             void self.refetch()
             void site.refetch()
             void daily.refetch()
           }}
-        >
-          <RotateCwIcon
-            data-icon="inline-start"
-            className={fetching ? "animate-spin" : undefined}
-          />
-          {fetching ? "更新中…" : "刷新资料"}
-        </Button>
+        />
       </PageHeading>
 
       {daily.isError && (
@@ -80,10 +73,7 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col gap-6 lg:flex-row lg:items-center">
               <div className="flex min-w-0 items-center gap-4 lg:w-64 lg:shrink-0">
                 <PebbleEditor user={user}>
-                  <AvatarFrame
-                    level={user.vip_level}
-                    badge={frameBadge(user)}
-                  >
+                  <AvatarFrame level={user.vip_level} badge={frameBadge(user)}>
                     <PebbleAvatar
                       id={user.id}
                       pebble={user.pebble}

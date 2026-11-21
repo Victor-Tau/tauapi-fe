@@ -5,7 +5,6 @@ import {
   CircleCheckIcon,
   CirclePauseIcon,
   ClockIcon,
-  CopyIcon,
   EllipsisIcon,
   EyeIcon,
   KeyRoundIcon,
@@ -13,12 +12,13 @@ import {
   PlusIcon,
   PowerIcon,
   PowerOffIcon,
-  RotateCwIcon,
   ShieldCheckIcon,
   Trash2Icon,
 } from "lucide-react"
 import { useSearchParams } from "react-router"
 import { toast } from "sonner"
+
+import { cn } from "cn"
 
 import {
   deleteKey,
@@ -35,7 +35,9 @@ import {
   useGroupVendorIcons,
   type GroupVendorIcon,
 } from "@/components/group-icon"
+import { CopyButton } from "@/components/copy-button"
 import { PageHeading } from "@/components/page-heading"
+import { RefreshButton } from "@/components/refresh-button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -88,9 +90,9 @@ import {
   useSelfGroups,
   useSiteStatus,
 } from "@/hooks/use-queries"
+import { useSettledKey } from "@/hooks/use-settled-key"
 import { queryKeys } from "@/lib/query"
 import type { ModelApiToken, UserGroups } from "@/types/api"
-import { copyText } from "@/utils/clipboard"
 import { formatNumber, formatQuota, formatUnixSeconds } from "@/utils/format"
 import { canEditKey, keyStatus, regroupKeyPayload } from "@/utils/key-form"
 
@@ -128,6 +130,7 @@ export default function KeysPage() {
   const [secret, setSecret] = useState<RevealedKey | null>(null)
 
   const keys = useKeys(page, KEYS_PAGE_SIZE)
+  const rowsKey = useSettledKey(page, !keys.isPlaceholderData)
   const site = useSiteStatus()
   const groups = useSelfGroups()
   const pricing = usePricing()
@@ -220,15 +223,13 @@ export default function KeysPage() {
     onSettled: () => setBusyId(null),
   })
 
-  async function copyKey(token: ModelApiToken) {
+  async function fetchKey(token: ModelApiToken) {
     setBusyId(token.id)
     try {
-      const key = await revealKey(token.id)
-      if (await copyText(key)) toast.success("已复制密钥")
-      // The browser can refuse after the network round trip; let the user copy by hand.
-      else setSecret({ name: token.name, key })
+      return await revealKey(token.id)
     } catch (error) {
       toast.error(errorMessage(error))
+      throw error
     } finally {
       setBusyId(null)
     }
@@ -267,18 +268,12 @@ export default function KeysPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading title="API 密钥">
-        <Button
-          variant="outline"
+        <RefreshButton
           size="sm"
-          disabled={keys.isFetching}
-          onClick={() => void keys.refetch()}
-        >
-          <RotateCwIcon
-            data-icon="inline-start"
-            className={keys.isFetching ? "animate-spin" : undefined}
-          />
-          {keys.isFetching ? "更新中…" : "刷新列表"}
-        </Button>
+          fetching={keys.isFetching}
+          label="刷新列表"
+          onRefresh={() => void keys.refetch()}
+        />
       </PageHeading>
 
       {keys.isError && (
@@ -307,7 +302,12 @@ export default function KeysPage() {
               ))}
             </div>
           ) : items.length ? (
-            <Table>
+            <Table
+              className={cn(
+                "transition-opacity duration-200",
+                keys.isPlaceholderData && "opacity-60"
+              )}
+            >
               <TableHeader>
                 <TableRow>
                   <TableHead>名称</TableHead>
@@ -319,7 +319,7 @@ export default function KeysPage() {
                   <TableHead className="w-16 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody key={rowsKey} className="swap-in">
                 {items.map((token) => {
                   const status = keyStatus(token.status)
                   const style = STATUS_STYLE[status.tone]
@@ -334,16 +334,19 @@ export default function KeysPage() {
                           <span className="font-mono text-sm">
                             {token.key ?? "sk-••••••••"}
                           </span>
-                          <Button
+                          <CopyButton
                             variant="ghost"
                             size="icon-sm"
                             className="text-muted-foreground"
                             disabled={busy}
-                            onClick={() => void copyKey(token)}
+                            text={() => fetchKey(token)}
+                            what="密钥"
+                            // The browser can refuse after the network round trip; let the user copy by hand.
+                            onFail={(key) =>
+                              setSecret({ name: token.name, key })
+                            }
                             aria-label={`复制密钥 ${token.name}`}
-                          >
-                            <CopyIcon />
-                          </Button>
+                          />
                         </div>
                       </TableCell>
                       <TableCell>

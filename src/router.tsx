@@ -144,6 +144,11 @@ export const router = createBrowserRouter([
                 ...page(() => import("@/pages/wallet")),
               },
               {
+                path: "/referral",
+                handle: { title: "邀请返利" } satisfies RouteHandle,
+                ...page(() => import("@/pages/referral")),
+              },
+              {
                 path: "/profile",
                 handle: { title: "个人资料" } satisfies RouteHandle,
                 ...page(() => import("@/pages/profile")),

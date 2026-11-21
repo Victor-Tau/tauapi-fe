@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { CircleAlertIcon, CopyIcon } from "lucide-react"
+import { CircleAlertIcon } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -14,6 +14,7 @@ import {
   type TwoFASetup,
   type VerificationScope,
 } from "@/api/security"
+import { CopyButton } from "@/components/copy-button"
 import { ErrorAlert } from "@/components/error-alert"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -37,7 +38,6 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { queryKeys } from "@/lib/query"
-import { copyText } from "@/utils/clipboard"
 
 import { useVerificationMode } from "./use-verification-mode"
 
@@ -307,21 +307,15 @@ function EnrolStep({
               <code className="min-w-0 rounded-md bg-row-alt px-2 py-1 font-mono text-xs break-all">
                 {setup.secret}
               </code>
-              <Button
+              <CopyButton
                 type="button"
                 variant="ghost"
                 size="icon-sm"
                 aria-label="复制密钥"
-                onClick={() =>
-                  void copyText(setup.secret).then((ok) =>
-                    ok
-                      ? toast.success("已复制密钥")
-                      : toast.error("复制失败，请手动选择")
-                  )
-                }
-              >
-                <CopyIcon />
-              </Button>
+                text={setup.secret}
+                what="密钥"
+                failMessage="复制失败，请手动选择"
+              />
             </div>
           </div>
         </div>
@@ -380,21 +374,16 @@ function BackupCodes({ codes }: { codes: string[] }) {
         <p className="text-xs text-muted-foreground">
           每个备用码只能使用一次，仅显示这一次，请妥善保存。
         </p>
-        <Button
+        <CopyButton
           type="button"
           variant="outline"
           size="sm"
-          onClick={() =>
-            void copyText(codes.join("\n")).then((ok) =>
-              ok
-                ? toast.success("已复制备用码")
-                : toast.error("复制失败，请手动记录")
-            )
-          }
+          text={codes.join("\n")}
+          what="备用码"
+          failMessage="复制失败，请手动记录"
         >
-          <CopyIcon data-icon="inline-start" />
           复制
-        </Button>
+        </CopyButton>
       </div>
     </div>
   )

@@ -4,7 +4,6 @@ import {
   ChartColumnIcon,
   DatabaseIcon,
   FileTextIcon,
-  RotateCwIcon,
   SearchXIcon,
   WalletIcon,
 } from "lucide-react"
@@ -13,6 +12,7 @@ import { cn } from "cn"
 import { DataPagination, pageCountOf } from "@/components/data-pagination"
 import { ErrorAlert } from "@/components/error-alert"
 import { PageHeading } from "@/components/page-heading"
+import { RefreshButton } from "@/components/refresh-button"
 import { IconStatCard } from "@/components/stat-card"
 import { TimeRangePicker } from "@/components/time-range-picker"
 import { Button } from "@/components/ui/button"
@@ -66,6 +66,7 @@ import {
   useUsageStat,
   useUserModels,
 } from "@/hooks/use-queries"
+import { useSettledKey } from "@/hooks/use-settled-key"
 import type { UsageLog, UsageLogFilters } from "@/types/api"
 import { formatNumber, formatQuota, formatTokens } from "@/utils/format"
 import { resolveRange, type TimeRange } from "@/utils/time-range"
@@ -142,6 +143,7 @@ export default function UsagePage() {
   }
 
   const logs = useLogs({ ...filters, p: page, page_size: pageSize })
+  const rowsKey = useSettledKey(`${filterKey}|${page}`, !logs.isPlaceholderData)
   const stat = useUsageStat(filters)
   // No endpoint returns period token totals, so they are summed from the
   // call details themselves (all pages of the current filters).
@@ -356,13 +358,11 @@ export default function UsagePage() {
               </Button>
             )}
             <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" disabled={fetching} onClick={refresh}>
-                <RotateCwIcon
-                  data-icon="inline-start"
-                  className={fetching ? "animate-spin" : undefined}
-                />
-                {fetching ? "更新中…" : "刷新"}
-              </Button>
+              <RefreshButton
+                fetching={fetching}
+                label="刷新"
+                onRefresh={refresh}
+              />
               <ColumnSettings
                 visible={visible}
                 onToggle={toggle}
@@ -401,7 +401,7 @@ export default function UsagePage() {
                   </TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody key={rowsKey} className="swap-in">
                 {logs.data.items.map((log) => (
                   <TableRow
                     key={log.id}

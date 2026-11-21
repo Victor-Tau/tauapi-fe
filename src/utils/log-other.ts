@@ -10,6 +10,8 @@ export interface LogOther {
   /** Time to first token, in milliseconds. */
   frt?: number
   ws?: boolean
+  /** Compact (compressed) request. */
+  compact?: boolean
   reasoning_effort?: string
   request_path?: string
   is_model_mapped?: boolean
@@ -48,6 +50,10 @@ export interface LogOther {
   model_price?: number
   billing_source?: string
   subscription_plan_title?: string
+  /** Wallet quota credited by a referral rebate (request_id referral-rebate-<id>). */
+  referral_rebate_quota?: number
+  /** Wallet quota credited by a fixed invitation reward (request_id invitation-reward-<id>). */
+  invitation_reward_quota?: number
   /** Structured content (key + params) of top-up/system logs. */
   content_parts?: LogMessage[]
   /** Operation descriptor of admin actions, e.g. user.quota_add. */
@@ -76,12 +82,13 @@ const NUMBER_KEYS = [
   'cache_creation_tokens_12h', 'cache_write_tokens', 'cache_creation_ratio', 'cache_creation_ratio_5m',
   'cache_creation_ratio_1h', 'cache_creation_ratio_12h', 'fixed_price',
   'model_ratio', 'completion_ratio', 'cache_ratio', 'group_ratio', 'user_group_ratio', 'model_price',
+  'referral_rebate_quota', 'invitation_reward_quota',
 ] as const
 const STRING_KEYS = [
   'reasoning_effort', 'request_path', 'upstream_model_name', 'billing_source', 'subscription_plan_title',
   'usage_semantic', 'billing_mode', 'expr_b64', 'matched_tier', 'billing_unit',
 ] as const
-const BOOLEAN_KEYS = ['ws', 'is_model_mapped', 'claude'] as const
+const BOOLEAN_KEYS = ['ws', 'is_model_mapped', 'claude', 'compact'] as const
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)

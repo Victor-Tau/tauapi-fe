@@ -1,19 +1,13 @@
 import { useState } from "react"
-import {
-  CopyIcon,
-  EyeIcon,
-  FileJsonIcon,
-  EyeOffIcon,
-  PlusIcon,
-  RotateCwIcon,
-} from "lucide-react"
+import { EyeIcon, FileJsonIcon, EyeOffIcon, PlusIcon } from "lucide-react"
 import { Link } from "react-router"
-import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 
 import type { TrendUnit } from "@/api/usage"
 import { ErrorAlert } from "@/components/error-alert"
+import { CopyButton } from "@/components/copy-button"
 import { PageHeading } from "@/components/page-heading"
+import { RefreshButton } from "@/components/refresh-button"
 import { StatCard } from "@/components/stat-card"
 import { Button } from "@/components/ui/button"
 import {
@@ -43,7 +37,6 @@ import {
 } from "@/hooks/use-queries"
 import { CLAUDE_CODE_SETTINGS, SDK_BASE_URL } from "@/lib/endpoint"
 import { queryKeys } from "@/lib/query"
-import { copyText } from "@/utils/clipboard"
 import { formatNumber, quotaDisplay } from "@/utils/format"
 import { exceedsMaxRange, resolvePreset } from "@/utils/time-range"
 
@@ -135,13 +128,11 @@ export default function DashboardPage() {
       <PageHeading
         title={`欢迎回来，${profile?.display_name || profile?.username || "你"}`}
       >
-        <Button variant="outline" disabled={fetching} onClick={refresh}>
-          <RotateCwIcon
-            data-icon="inline-start"
-            className={fetching ? "animate-spin" : undefined}
-          />
-          {fetching ? "更新中…" : "刷新总览"}
-        </Button>
+        <RefreshButton
+          fetching={fetching}
+          label="刷新总览"
+          onRefresh={refresh}
+        />
       </PageHeading>
 
       {failing[0] && (
@@ -289,8 +280,7 @@ export default function DashboardPage() {
               <QuickStep
                 index={2}
                 title="接入兼容 SDK"
-                body="在服务端配置密钥和调用地址。"
-                note="注意：某些客户端(如cc switch)，填写时端点需要去掉/v1 ！"
+                body="在客户端配置密钥和调用地址。"
               >
                 <EndpointField label="调用地址" url={SDK_BASE_URL} />
               </QuickStep>
@@ -341,27 +331,21 @@ function QuickStep({
   )
 }
 
-async function copyWithToast(text: string, what: string) {
-  if (await copyText(text)) toast.success(`已复制${what}`)
-  else toast.error("无法访问剪贴板，请手动复制。")
-}
-
 function EndpointField({ label, url }: { label: string; url: string }) {
   return (
     <div className="flex min-h-9 min-w-0 items-center gap-1 rounded-lg bg-row-alt py-1.5 pr-1 pl-3">
       <code className="min-w-0 flex-1 font-mono text-[13px] leading-snug whitespace-nowrap">
         {url}
       </code>
-      <Button
+      <CopyButton
         variant="ghost"
         size="icon-sm"
         className="shrink-0 text-muted-foreground"
         aria-label={`复制${label}`}
         title={label}
-        onClick={() => void copyWithToast(url, label)}
-      >
-        <CopyIcon />
-      </Button>
+        text={url}
+        what={label}
+      />
     </div>
   )
 }
@@ -388,15 +372,14 @@ function ClaudeCodeSettingsDialog() {
           <pre className="max-h-[60svh] overflow-auto p-3 pr-12 font-mono text-[13px] leading-relaxed">
             {CLAUDE_CODE_SETTINGS}
           </pre>
-          <Button
+          <CopyButton
             variant="ghost"
             size="icon-sm"
             className="absolute top-1.5 right-1.5 text-muted-foreground"
             aria-label="复制配置"
-            onClick={() => void copyWithToast(CLAUDE_CODE_SETTINGS, "配置")}
-          >
-            <CopyIcon />
-          </Button>
+            text={CLAUDE_CODE_SETTINGS}
+            what="配置"
+          />
         </div>
       </DialogContent>
     </Dialog>

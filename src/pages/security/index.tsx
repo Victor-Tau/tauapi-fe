@@ -1,8 +1,6 @@
-import { RotateCwIcon } from "lucide-react"
-
 import { InfoCard } from "@/components/info-card"
 import { PageHeading } from "@/components/page-heading"
-import { Button } from "@/components/ui/button"
+import { RefreshButton } from "@/components/refresh-button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLoginSessions, useSelf } from "@/hooks/use-queries"
 import { roleText, statusText } from "@/utils/account"
@@ -19,20 +17,14 @@ export default function SecurityPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading title="安全设置">
-        <Button
-          variant="outline"
-          disabled={fetching}
-          onClick={() => {
+        <RefreshButton
+          fetching={fetching}
+          label="刷新"
+          onRefresh={() => {
             void self.refetch()
             void sessions.refetch()
           }}
-        >
-          <RotateCwIcon
-            data-icon="inline-start"
-            className={fetching ? "animate-spin" : undefined}
-          />
-          {fetching ? "更新中…" : "刷新"}
-        </Button>
+        />
       </PageHeading>
 
       <div className="grid gap-6 lg:grid-cols-2">

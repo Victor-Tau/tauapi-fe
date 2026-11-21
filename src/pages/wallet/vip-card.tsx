@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DataPagination, pageCountOf } from "@/components/data-pagination"
 import { useGrowth, useVipConfig } from "@/hooks/use-queries"
+import { useSettledKey } from "@/hooks/use-settled-key"
 import type { GrowthEvent, SelfProfile } from "@/types/api"
 import { formatUnixSeconds } from "@/utils/format"
 import {
@@ -199,6 +200,7 @@ function GrowthRecordList({
 function AllGrowthRecords({ windowDays }: { windowDays: number }) {
   const [page, setPage] = useState(1)
   const growth = useGrowth(page, DIALOG_PAGE_SIZE)
+  const rowsKey = useSettledKey(page, !growth.isPlaceholderData)
   const records = growth.data?.records
   return (
     <>
@@ -221,8 +223,12 @@ function AllGrowthRecords({ windowDays }: { windowDays: number }) {
       ) : (
         <div className="flex min-h-0 flex-col gap-3">
           <GrowthRecordList
+            key={rowsKey}
             records={records.items}
-            className="-mx-5 min-h-0 overflow-y-auto px-5"
+            className={cn(
+              "swap-in swap-fade -mx-5 min-h-0 overflow-y-auto px-5 transition-opacity duration-200",
+              growth.isPlaceholderData && "opacity-60"
+            )}
           />
           {records.total > DIALOG_PAGE_SIZE && (
             <DataPagination

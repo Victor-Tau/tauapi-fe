@@ -49,5 +49,12 @@ export const queryKeys = {
     ["growth", page, pageSize] as const,
   growthAll: ["growth"] as const,
   pricing: ["pricing"] as const,
+  // Under one prefix, so the page refresh reloads all referral data.
+  referralAll: ["referral"] as const,
+  referralPermissions: ["referral", "permissions"] as const,
+  affCode: ["referral", "aff-code"] as const,
+  invitees: (page: number, pageSize: number) =>
+    ["referral", "invitees", page, pageSize] as const,
+  rebatesAll: ["referral", "rebates"] as const,
   perfSummary: (hours: number) => ["perf-summary", hours] as const,
 }

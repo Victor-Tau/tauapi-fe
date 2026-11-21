@@ -2,6 +2,7 @@ import { useCallback, useState } from "react"
 import {
   ActivityIcon,
   CircleUserRoundIcon,
+  GiftIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   TagsIcon,
@@ -25,6 +26,7 @@ export const NAV_ITEMS = [
   { title: "模型列表", url: "/models", icon: TagsIcon },
   { title: "用量记录", url: "/usage", icon: ActivityIcon },
   { title: "我的钱包", url: "/wallet", icon: WalletIcon },
+  { title: "邀请返利", url: "/referral", icon: GiftIcon },
   { title: "个人资料", url: "/profile", icon: CircleUserRoundIcon },
 ] as const
 

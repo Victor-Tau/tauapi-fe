@@ -33,6 +33,9 @@ export const selfSchema: z.ZodType<SelfProfile> = z.object({
   vip_level: integer.nullable().optional(),
   // A malformed avatar falls back to the default rather than breaking the profile.
   pebble: pebbleSchema.nullable().optional().catch(null),
+  aff_code: z.string().optional().catch(undefined),
+  aff_count: nonnegative.optional().catch(undefined),
+  aff_history_quota: number.optional().catch(undefined),
 })
 
 const announcementSchema = z.object({

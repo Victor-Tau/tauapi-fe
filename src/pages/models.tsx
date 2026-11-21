@@ -1,13 +1,6 @@
 import { createContext, useContext, useMemo, useState } from "react"
-import {
-  ChevronRightIcon,
-  CopyIcon,
-  RotateCwIcon,
-  SearchIcon,
-  SearchXIcon,
-} from "lucide-react"
+import { ChevronRightIcon, SearchIcon, SearchXIcon } from "lucide-react"
 import { useSearchParams } from "react-router"
-import { toast } from "sonner"
 
 import { ErrorAlert } from "@/components/error-alert"
 import { ModelsBodySkeleton } from "@/components/route-skeleton"
@@ -17,7 +10,9 @@ import {
   type GroupVendorIcon,
 } from "@/components/group-icon"
 import { hasModelIcon, ModelIcon } from "@/components/model-icon"
+import { CopyButton } from "@/components/copy-button"
 import { PageHeading } from "@/components/page-heading"
+import { RefreshButton } from "@/components/refresh-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
@@ -56,7 +51,6 @@ import type {
   PricingVendor,
   SiteStatus,
 } from "@/types/api"
-import { copyText } from "@/utils/clipboard"
 import { accountSpecial } from "@/utils/vip"
 import { formatNumber, formatTokens } from "@/utils/format"
 import {
@@ -112,11 +106,7 @@ const HEALTH_RANK: Record<Health, number> = {
 }
 
 function formatPercent(value: number) {
-  return `${formatNumber(value)}%`
-}
-
-function formatLatency(ms: number) {
-  return ms >= 1000 ? `${formatNumber(ms / 1000)}s` : `${formatNumber(ms)}ms`
+  return `${value.toFixed(1)}%`
 }
 
 /** Decimals shared by every ratio on the page; derived from the catalog. */
@@ -276,6 +266,8 @@ export default function ModelsPage() {
     })
   }, [current, search])
 
+  const sorted = useMemo(() => rowsBySeries(models).flat(), [models])
+
   const filtered = search.trim() !== ""
   const fetching = pricing.isFetching || perf.isFetching
   const perfState = perf.isPending
@@ -292,21 +284,15 @@ export default function ModelsPage() {
     <RatioDigitsContext.Provider value={ratioDigits}>
       <div className="flex flex-col gap-6">
         <PageHeading title="模型列表">
-          <Button
-            variant="outline"
-            disabled={fetching}
-            onClick={() => {
+          <RefreshButton
+            fetching={fetching}
+            label="刷新"
+            onRefresh={() => {
               void pricing.refetch()
               void perf.refetch()
               void userModels.refetch()
             }}
-          >
-            <RotateCwIcon
-              data-icon="inline-start"
-              className={fetching ? "animate-spin" : undefined}
-            />
-            {fetching ? "更新中…" : "刷新"}
-          </Button>
+          />
         </PageHeading>
 
         {pricing.isError && (
@@ -358,8 +344,9 @@ export default function ModelsPage() {
               <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
                   <h2
+                    key={current.name}
                     id="model-group-title"
-                    className="truncate font-heading text-lg font-semibold"
+                    className="swap-value truncate font-heading text-lg font-semibold"
                     title={current.name}
                   >
                     {current.label}
@@ -407,8 +394,12 @@ export default function ModelsPage() {
               {models.length ? (
                 // Columns follow the space left beside the group list, not the
                 // viewport, so they hold up whatever the rail is doing.
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  {models.map((model) => (
+                // Re-keyed per group so the cards rise in on every switch.
+                <div
+                  key={current.name}
+                  className="swap-in grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                >
+                  {sorted.map((model) => (
                     <ModelCard
                       key={model.model_name}
                       model={model}
@@ -454,6 +445,92 @@ export default function ModelsPage() {
   )
 }
 
+const SERIES_RE = /^gpt-(\d+(?:\.\d+)?)-([a-z]+)$/
+// claude-opus-4-8-max / claude-sonnet-4-20250514 and claude-3-5-haiku-20241022.
+const CLAUDE_NEW_RE = /^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-(.*))?$/
+const CLAUDE_OLD_RE = /^claude-(\d+)(?:-(\d+))?-([a-z]+)(?:-(.*))?$/
+const CLAUDE_FAMILIES = ["fable", "opus", "sonnet", "haiku"]
+
+function claudeParts(name: string) {
+  const n = CLAUDE_NEW_RE.exec(name)
+  if (n && CLAUDE_FAMILIES.includes(n[1])) {
+    return { family: n[1], version: Number(n[2]) + Number(n[3] ?? 0) / 100 }
+  }
+  const o = CLAUDE_OLD_RE.exec(name)
+  if (o && CLAUDE_FAMILIES.includes(o[3])) {
+    return { family: o[3], version: Number(o[1]) + Number(o[2] ?? 0) / 100 }
+  }
+  return null
+}
+
+/**
+ * Lays GPT models out one series per row (gpt-6.2-astra, gpt-6-astra / then
+ * gpt-6.2-sol, gpt-6.1-sol, ...), newest version first. Series with a single
+ * model and every other name (codex-auto-review, gpt-5.6-luna, ...) share the
+ * last row. Claude models get one row per family (fable, opus, sonnet,
+ * haiku), newest first. Models that are not versioned GPT names keep one alphabetical row.
+ */
+function rowsBySeries(models: PricingModel[]): PricingModel[][] {
+  const series = new Map<string, { version: number; model: PricingModel }[]>()
+  const rest: PricingModel[] = []
+  const claude = new Map<string, { version: number; model: PricingModel }[]>()
+  for (const model of models) {
+    const c = claudeParts(model.model_name)
+    if (c) {
+      const list = claude.get(c.family)
+      const entry = { version: c.version, model }
+      if (list) list.push(entry)
+      else claude.set(c.family, [entry])
+      continue
+    }
+    const m = SERIES_RE.exec(model.model_name)
+    if (!m) {
+      rest.push(model)
+      continue
+    }
+    const list = series.get(m[2])
+    const entry = { version: Number(m[1]), model }
+    if (list) list.push(entry)
+    else series.set(m[2], [entry])
+  }
+
+  const rows: { newest: number; name: string; models: PricingModel[] }[] = []
+  for (const [name, list] of series) {
+    list.sort(
+      (a, b) =>
+        b.version - a.version ||
+        a.model.model_name.localeCompare(b.model.model_name)
+    )
+    if (list.length > 1) {
+      rows.push({
+        newest: list[0].version,
+        name,
+        models: list.map((e) => e.model),
+      })
+    } else {
+      rest.push(list[0].model)
+    }
+  }
+  rows.sort((a, b) => b.newest - a.newest || a.name.localeCompare(b.name))
+
+  const out = rows.map((r) => r.models)
+  // Claude: fable first, haiku last; newest version first within a family.
+  for (const family of CLAUDE_FAMILIES) {
+    const list = claude.get(family)
+    if (!list) continue
+    list.sort(
+      (a, b) =>
+        b.version - a.version ||
+        a.model.model_name.localeCompare(b.model.model_name)
+    )
+    out.push(list.map((e) => e.model))
+  }
+  if (rest.length) {
+    out.push(rest.sort((a, b) => a.model_name.localeCompare(b.model_name)))
+  }
+  return out
+}
+
 /**
  * Group switcher. lg+: a sticky column (clear of the rail's hover strip,
  * which stops 24px past the 64px rail while content starts at 104px).
@@ -487,7 +564,7 @@ function GroupNav({
                 onClick={() => onSelect(group.name)}
                 title={group.label === group.name ? undefined : group.name}
                 className={cn(
-                  "flex h-10 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring max-lg:bg-card",
+                  "press flex h-10 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring max-lg:bg-card",
                   active
                     ? "bg-nav-active! font-medium text-foreground"
                     : "text-muted-foreground hover:bg-(--control-hover) hover:text-foreground"
@@ -523,11 +600,6 @@ function GroupNav({
       </ul>
     </nav>
   )
-}
-
-async function copyName(name: string) {
-  if (await copyText(name)) toast.success("已复制模型名称")
-  else toast.error("无法访问剪贴板，请手动复制。")
 }
 
 function ModelCard({
@@ -570,60 +642,41 @@ function ModelCard({
       size="sm"
       className="gap-2.5 rounded-2xl [--card-spacing:--spacing(3.5)]"
     >
-      <CardHeader className="grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-0.5">
+      <CardHeader className="grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3">
         <div
-          className="row-span-2 flex size-9 items-center justify-center rounded-lg bg-nav-active font-heading text-sm font-semibold"
+          className="flex size-8 items-center justify-center rounded-lg bg-nav-active font-heading text-sm font-semibold"
           title={vendorName}
         >
           {hasModelIcon(model.model_name, vendor) ? (
             <ModelIcon
               model={model.model_name}
               vendor={vendor}
-              className="size-5"
+              className="size-4"
             />
           ) : (
             <span aria-hidden="true">{initial}</span>
           )}
         </div>
-        <div className="flex min-w-0 items-center gap-1">
-          <span className="truncate font-mono text-sm font-semibold">
-            {model.model_name}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="shrink-0 text-muted-foreground"
-            aria-label={`复制模型名称 ${model.model_name}`}
-            onClick={() => void copyName(model.model_name)}
-          >
-            <CopyIcon />
-          </Button>
-        </div>
-        <div className="flex min-w-0 items-center gap-2 text-xs">
-          {perfState === "loading" ? (
-            <Skeleton className="h-4 w-28 rounded-sm" />
-          ) : (
-            <span
-              className={cn(
-                "flex items-center gap-1.5 truncate",
-                HEALTH_TEXT[health]
-              )}
-            >
-              <span
-                className="size-2 shrink-0 rounded-full bg-current"
-                aria-hidden="true"
-              />
-              {perfState === "error"
-                ? "状态未知"
-                : perf
-                  ? `${HEALTH_LABEL[health]} · 平均耗时 ${formatLatency(perf.avg_latency_ms)}`
-                  : HEALTH_LABEL[health]}
+        <div className="flex min-w-0 flex-col justify-center gap-1">
+          <div className="flex min-w-0 items-center gap-1">
+            <span className="truncate font-mono text-base leading-6 font-semibold">
+              {model.model_name}
             </span>
-          )}
+            <CopyButton
+              variant="ghost"
+              size="icon-xs"
+              className="shrink-0 text-muted-foreground"
+              aria-label={`复制模型名称 ${model.model_name}`}
+              text={model.model_name}
+              what="模型名称"
+            />
+          </div>
           {available === false && (
-            <Badge variant="outline" className="shrink-0">
-              无权限
-            </Badge>
+            <div className="flex min-w-0 items-center gap-2 text-xs">
+              <Badge variant="outline" className="shrink-0">
+                无权限
+              </Badge>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -655,13 +708,31 @@ function ModelCard({
           <HourlyStrip perf={perf} windowEnd={windowEnd} />
         )}
         <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="tabular-nums">
-            {perf
-              ? `可用率 ${formatPercent(perf.success_rate)}`
-              : perfState === "error"
-                ? "状态数据暂不可用"
-                : "近 24 小时暂无调用"}
-          </span>
+          {perfState === "loading" ? (
+            <Skeleton className="h-4 w-40 rounded-sm" />
+          ) : (
+            <span className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5",
+                  HEALTH_TEXT[health]
+                )}
+              >
+                <span
+                  className="size-2 shrink-0 rounded-full bg-current"
+                  aria-hidden="true"
+                />
+                {perfState === "error" ? "状态未知" : HEALTH_LABEL[health]}
+              </span>
+              <span className="truncate tabular-nums">
+                {perf
+                  ? `成功率 ${formatPercent(perf.success_rate)}`
+                  : perfState === "error"
+                    ? "数据暂不可用"
+                    : "..."}
+              </span>
+            </span>
+          )}
           <Popover>
             <PopoverTrigger
               render={
@@ -1003,10 +1074,9 @@ function ModelDetail({
             </div>
             {perf ? (
               <>
-                <dl className="grid grid-cols-3 gap-2 text-center">
+                <dl className="grid grid-cols-2 gap-2 text-center">
                   {[
-                    ["可用率", formatPercent(perf.success_rate)],
-                    ["平均耗时", formatLatency(perf.avg_latency_ms)],
+                    ["成功率", formatPercent(perf.success_rate)],
                     ["输出速度", `${formatTokens(perf.avg_tps)} tok/s`],
                   ].map(([label, value]) => (
                     <div

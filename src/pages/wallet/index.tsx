@@ -1,10 +1,11 @@
 import { useState } from "react"
-import { ChevronRightIcon, KeyRoundIcon, RotateCwIcon } from "lucide-react"
+import { ChevronRightIcon, KeyRoundIcon } from "lucide-react"
 import { Link } from "react-router"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { ErrorAlert } from "@/components/error-alert"
 import { PageHeading } from "@/components/page-heading"
+import { RefreshButton } from "@/components/refresh-button"
 import { StatCard } from "@/components/stat-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -114,13 +115,11 @@ export default function WalletPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading title="我的钱包">
-        <Button variant="outline" disabled={fetching} onClick={refresh}>
-          <RotateCwIcon
-            data-icon="inline-start"
-            className={fetching ? "animate-spin" : undefined}
-          />
-          {fetching ? "更新中…" : "刷新钱包"}
-        </Button>
+        <RefreshButton
+          fetching={fetching}
+          label="刷新钱包"
+          onRefresh={refresh}
+        />
       </PageHeading>
 
       {failing[0] && (

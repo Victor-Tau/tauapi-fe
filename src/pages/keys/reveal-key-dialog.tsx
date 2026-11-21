@@ -1,6 +1,4 @@
-import { CopyIcon } from "lucide-react"
-import { toast } from "sonner"
-
+import { CopyButton } from "@/components/copy-button"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,7 +11,6 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
-import { copyText } from "@/utils/clipboard"
 
 export interface RevealedKey {
   name: string
@@ -27,12 +24,6 @@ export function RevealKeyDialog({
   secret: RevealedKey | null
   onClose: () => void
 }) {
-  async function copy() {
-    if (!secret) return
-    if (await copyText(secret.key)) toast.success("已复制")
-    else toast.error("无法访问剪贴板，请手动复制密钥。")
-  }
-
   return (
     <Dialog
       open={secret !== null}
@@ -62,10 +53,13 @@ export function RevealKeyDialog({
         </Field>
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>关闭</DialogClose>
-          <Button onClick={() => void copy()}>
-            <CopyIcon data-icon="inline-start" />
+          <CopyButton
+            text={secret?.key ?? ""}
+            what="密钥"
+            failMessage="无法访问剪贴板，请手动复制密钥。"
+          >
             复制密钥
-          </Button>
+          </CopyButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

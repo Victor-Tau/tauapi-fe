@@ -4,9 +4,11 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   Columns3Icon,
+  Minimize2Icon,
   DatabaseIcon,
   SaveIcon,
   EyeIcon,
+  GlobeIcon,
   InfoIcon,
 } from "lucide-react"
 import { cn } from "cn"
@@ -45,7 +47,6 @@ import {
   firstTokenMs,
   firstTokenTone,
   isWebSearch,
-  outputTokensPerSecond,
   tokenBreakdown,
   type Tone,
 } from "@/utils/log-other"
@@ -140,11 +141,16 @@ function InfoTip({
   label,
   rows,
   summary = "line",
+  children,
+  showTitle = true,
 }: {
   /** Accessible name of the trigger and the tooltip's title. */
   label: string
   rows: DetailRow[]
   summary?: "line" | "panel"
+  /** Content shown before the info icon; the whole group becomes the trigger. */
+  children?: ReactNode
+  showTitle?: boolean
 }) {
   if (!rows.length) return null
   const main = rows.filter((row) => !row.summary)
@@ -156,11 +162,23 @@ function InfoTip({
           <button
             type="button"
             aria-label={label}
-            className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn(
+              "inline-flex shrink-0 items-center outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              children
+                ? "group/tip -my-1 gap-1.5 rounded-md py-1"
+                : "-m-1.5 size-7 justify-center rounded-full text-muted-foreground/70 hover:text-foreground"
+            )}
           />
         }
       >
-        <InfoIcon className="size-3.5" />
+        {children}
+        <InfoIcon
+          className={cn(
+            "size-3.5",
+            children &&
+              "text-muted-foreground/70 group-hover/tip:text-foreground"
+          )}
+        />
       </TooltipTrigger>
       <TooltipContent
         className={cn(
@@ -169,7 +187,9 @@ function InfoTip({
           rows.some((row) => !row.inline) && "min-w-60"
         )}
       >
-        <div className="pb-1 font-semibold text-foreground">{label}</div>
+        {showTitle && (
+          <div className="pb-1 font-semibold text-foreground">{label}</div>
+        )}
         {main.map((row) => (
           <DetailLine key={row.label} row={row} />
         ))}
@@ -194,11 +214,14 @@ function InfoTip({
 
 /** Token breakdown in billing terms ("Token 明细"). */
 export function tokenRows(log: UsageLog): DetailRow[] {
+  if (isWebSearch(log)) {
+    return [{ label: "OpenAI联网搜索", value: "按次计费", inline: true }]
+  }
   const tokens = tokenBreakdown(log)
   if (!tokens) return []
   return [
     {
-      label: "普通输入 Token",
+      label: "输入 Token",
       value: formatTokens(tokens.normalInput),
       tone: "input",
     },
@@ -220,7 +243,7 @@ export function tokenRows(log: UsageLog): DetailRow[] {
 
 /** Stated price of OpenAI web search, as published to users. */
 const WEB_SEARCH_ROW: DetailRow = {
-  label: "openai联网搜索",
+  label: "OpenAI联网搜索",
   value: "0.01元/次",
   inline: true,
 }
@@ -291,6 +314,26 @@ export function billingRows(
     })
   }
   return rows
+}
+
+/** Tiny one-line tooltip around an inline element. */
+function MiniTip({
+  label,
+  className,
+  children,
+}: {
+  label: string
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className={className} />}>
+        {children}
+      </TooltipTrigger>
+      <TooltipContent className="px-2 py-1 text-xs">{label}</TooltipContent>
+    </Tooltip>
+  )
 }
 
 function TransportBadges({ log }: { log: UsageLog }) {
@@ -381,7 +424,7 @@ export const LOG_COLUMNS: LogColumn[] = [
   {
     id: "effort",
     label: "推理强度",
-    defaultVisible: false,
+    defaultVisible: true,
     cell: (log) =>
       log.other?.reasoning_effort ? (
         <span className="font-medium">{log.other.reasoning_effort}</span>
@@ -395,7 +438,19 @@ export const LOG_COLUMNS: LogColumn[] = [
     defaultVisible: true,
     cell: (log) =>
       log.other?.request_path ? (
-        <span className="font-mono text-[13px]">{log.other.request_path}</span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="font-mono text-[13px]">
+            {log.other.request_path}
+          </span>
+          {log.other.compact && (
+            <MiniTip label="压缩请求" className="inline-flex">
+              <Minimize2Icon
+                className="size-3.5 shrink-0 text-amber-600"
+                aria-label="压缩请求"
+              />
+            </MiniTip>
+          )}
+        </span>
       ) : (
         muted
       ),
@@ -412,6 +467,22 @@ export const LOG_COLUMNS: LogColumn[] = [
     align: "right",
     defaultVisible: true,
     cell: (log) => {
+      if (isWebSearch(log)) {
+        return (
+          <div className="flex items-center justify-end">
+            <InfoTip
+              label="OpenAI联网搜索"
+              rows={tokenRows(log)}
+              showTitle={false}
+            >
+              <span className="inline-flex items-center gap-1 font-mono text-[11px] font-normal text-warning-text">
+                <GlobeIcon className="size-3 shrink-0" aria-hidden="true" />
+                SEARCH
+              </span>
+            </InfoTip>
+          </div>
+        )
+      }
       const tokens = tokenBreakdown(log)
       if (!tokens) return muted
       const read = tokens.cacheRead
@@ -420,40 +491,40 @@ export const LOG_COLUMNS: LogColumn[] = [
         <div className="flex items-center justify-end gap-1.5">
           <div className="flex flex-col items-end gap-0.5 font-mono tabular-nums">
             <span className="flex items-center gap-2 text-[13px] font-bold">
-              <span
+              <MiniTip
+                label="输入"
                 className="inline-flex items-center gap-0.5 text-data-input"
-                title="普通输入"
               >
                 <ArrowDownIcon className="size-3.5" />
                 {formatTokens(tokens.normalInput)}
-              </span>
-              <span
+              </MiniTip>
+              <MiniTip
+                label="输出"
                 className="inline-flex items-center gap-0.5 text-data-output"
-                title="输出"
               >
                 <ArrowUpIcon className="size-3.5" />
                 {formatTokens(tokens.output)}
-              </span>
+              </MiniTip>
             </span>
             {(read > 0 || write > 0) && (
               <span className="flex items-center gap-2 text-xs font-semibold">
                 {read > 0 && (
-                  <span
+                  <MiniTip
+                    label="缓存读取"
                     className="inline-flex items-center gap-1 text-data-cache-read"
-                    title="缓存读取"
                   >
                     <DatabaseIcon className="size-3" />
                     {formatTokens(read, 1)}
-                  </span>
+                  </MiniTip>
                 )}
                 {write > 0 && (
-                  <span
+                  <MiniTip
+                    label="缓存写入"
                     className="inline-flex items-center gap-1 text-data-cache-write"
-                    title="缓存写入"
                   >
                     <SaveIcon className="size-3" />
                     {formatTokens(write, 1)}
-                  </span>
+                  </MiniTip>
                 )}
               </span>
             )}
@@ -514,25 +585,6 @@ export const LOG_COLUMNS: LogColumn[] = [
             </span>
           )}
         </div>
-      )
-    },
-  },
-  {
-    id: "speed",
-    label: "速率",
-    align: "right",
-    defaultVisible: true,
-    cell: (log) => {
-      const tps = outputTokensPerSecond(log)
-      return tps == null ? (
-        muted
-      ) : (
-        <span className="font-mono text-[13px] font-semibold tabular-nums">
-          {formatNumber(Math.round(tps))}
-          <span className="ml-1 text-xs font-normal text-muted-foreground">
-            tok/s
-          </span>
-        </span>
       )
     },
   },
@@ -600,7 +652,7 @@ export function ViewButton({
 }
 
 // Versioned: a new default column set should reach people who had saved one.
-const STORAGE_KEY = "api-console-usage-columns-v3"
+const STORAGE_KEY = "api-console-usage-columns-v4"
 const DEFAULT_VISIBLE = LOG_COLUMNS.filter((c) => c.defaultVisible).map(
   (c) => c.id
 )

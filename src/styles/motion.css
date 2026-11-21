@@ -173,6 +173,36 @@
     .page-view > * > :nth-child(5) { animation-delay: 140ms; }
     .page-view > * > :nth-child(n + 6) { animation-delay: 175ms; }
 
+    /* ---- Content swap: one motion for every in-place content change ----
+       Switching a model group, turning a page, changing a list's filter:
+       the container is re-keyed when the new content is on screen, and its
+       items rise in with a short stagger (capped, so long pages don't
+       drag). Fill "backwards" only, like the page sections above. */
+    .swap-in > * {
+        animation: swap-item-enter 380ms var(--ease-damped-expand) backwards;
+    }
+    .swap-in > :nth-child(2) { animation-delay: 22ms; }
+    .swap-in > :nth-child(3) { animation-delay: 44ms; }
+    .swap-in > :nth-child(4) { animation-delay: 66ms; }
+    .swap-in > :nth-child(5) { animation-delay: 88ms; }
+    .swap-in > :nth-child(6) { animation-delay: 110ms; }
+    .swap-in > :nth-child(7) { animation-delay: 132ms; }
+    .swap-in > :nth-child(8) { animation-delay: 154ms; }
+    .swap-in > :nth-child(9) { animation-delay: 176ms; }
+    .swap-in > :nth-child(n + 10) { animation-delay: 198ms; }
+
+    /* Inside a scroll container the rise would extend the scroll area for a
+       moment (a scrollbar flashes); fade only there. */
+    .swap-in.swap-fade > * {
+        animation-name: swap-fade-enter;
+    }
+
+    /* A single value that changed (page number, group title). */
+    .swap-value {
+        display: inline-block;
+        animation: swap-value-enter 320ms var(--ease-damped-expand) backwards;
+    }
+
     .route-skeleton {
         opacity: 1;
         transition: opacity 200ms ease-out 90ms;
@@ -222,6 +252,25 @@
     from {
         opacity: 0;
         translate: 0 10px;
+    }
+}
+
+@keyframes swap-item-enter {
+    from {
+        opacity: 0;
+        translate: 0 8px;
+    }
+}
+
+@keyframes swap-fade-enter {
+    from { opacity: 0; }
+}
+
+@keyframes swap-value-enter {
+    from {
+        opacity: 0;
+        translate: 0 4px;
+        filter: blur(2px);
     }
 }
 

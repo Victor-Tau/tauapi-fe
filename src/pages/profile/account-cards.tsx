@@ -11,7 +11,6 @@ import { accountSpecial, STUDENT_GROUP, type VipTier } from "@/utils/vip"
 
 import { VipBadge } from "./vip-badges"
 
-
 /** Account details: names, UID, email, registration, status, VIP, student. */
 export function AccountInfoCard({
   user,

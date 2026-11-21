@@ -156,7 +156,9 @@ const KEY_MESSAGES: Record<string, string> = {
   "Another log export is running. Try again after it finishes.": "已有日志导出正在进行，请完成后再试。",
   // Wallet
   "Payment, redemption, subscription, and invitation reward features are disabled. The administrator must confirm compliance terms before enabling them.":
-    "充值、兑换、订阅和邀请奖励功能暂未开放。",
+    "充值、兑换、订阅和邀请返利功能暂未开放。",
+  "Invitation access is disabled": "邀请功能已关闭。",
+  "Rebate access is disabled": "返利功能已关闭。",
   "Top-up is processing, please try again later": "充值正在处理中，请稍后再试。",
   "Redemption failed, please try again later": "兑换失败，请检查兑换码是否正确、未使用且未过期。",
   "Insufficient balance": "余额不足。",
