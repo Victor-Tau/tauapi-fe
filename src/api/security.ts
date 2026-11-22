@@ -53,7 +53,7 @@ export async function requestProof(input: {
   const body: Record<string, unknown> = { scope: input.scope, method: input.method }
   if (input.context) body.context = input.context
   if (input.method === 'password') {
-    if (!input.password) throw new ApiError('请输入当前密码。', 400, 'VALIDATION_ERROR')
+    if (!input.password) throw new ApiError('请输入当前登录密码。', 400, 'VALIDATION_ERROR')
     const config = parseData(encryptionSchema, await apiClient.request('/api/user/login/encryption-key', { auth: false }), '密码加密配置')
     Object.assign(body, await encryptedPasswordFields(input.password, config))
   } else if (input.method === '2fa') {

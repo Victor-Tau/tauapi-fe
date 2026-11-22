@@ -1,9 +1,15 @@
 import { type ComponentProps, type ReactNode } from "react"
+import { Link } from "react-router"
 
 import { InfoCard } from "@/components/info-card"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { SelfProfile } from "@/types/api"
 import { statusText } from "@/utils/account"
 import { formatUnixSeconds } from "@/utils/format"
@@ -57,13 +63,28 @@ export function AccountInfoCard({
         ],
         [
           "大学生认证",
-          <Badge
-            key="student"
-            variant="neutral"
-            className={student ? "bg-info-text/12 text-info-text" : undefined}
-          >
-            {student ? "已认证" : "未认证"}
-          </Badge>,
+          student ? (
+            <Badge
+              key="student"
+              variant="neutral"
+              className="bg-info-text/12 text-info-text"
+            >
+              已认证
+            </Badge>
+          ) : (
+            <Tooltip key="student">
+              <TooltipTrigger
+                render={
+                  <Link to="/security?bind=email" className="rounded-md" />
+                }
+              >
+                <Badge variant="neutral" className="cursor-pointer">
+                  未认证
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="top">点击跳转邮箱绑定</TooltipContent>
+            </Tooltip>
+          ),
         ],
       ]}
     />

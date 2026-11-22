@@ -71,11 +71,11 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
 
   const needsCode = mode.kind === "ready" && mode.method === "2fa"
   const errors = {
-    current: current ? null : "请输入当前密码",
+    current: current ? null : "请输入当前登录密码",
     next: !passwordMeetsPolicy(next)
       ? "新密码不符合要求"
       : next === current
-        ? "新密码不能与当前密码相同"
+        ? "新密码不能与当前登录密码相同"
         : null,
     confirm: confirm === next ? null : "两次输入的新密码不一致",
     code: needsCode && !code.trim() ? "请输入两步验证码" : null,
@@ -144,7 +144,7 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
     <form onSubmit={(event) => void submit(event)} noValidate>
       <FieldGroup className="gap-4">
         <Field data-invalid={(submitted && !!errors.current) || undefined}>
-          <FieldLabel htmlFor="password-current">当前密码</FieldLabel>
+          <FieldLabel htmlFor="password-current">当前登录密码</FieldLabel>
           <Input
             id="password-current"
             type="password"
@@ -197,7 +197,7 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
             })}
           </ul>
           {submitted &&
-            errors.next === "新密码不能与当前密码相同" &&
+            errors.next === "新密码不能与当前登录密码相同" &&
             show(errors.next)}
         </Field>
         <Field data-invalid={(submitted && !!errors.confirm) || undefined}>

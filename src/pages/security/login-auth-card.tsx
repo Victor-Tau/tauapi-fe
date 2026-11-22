@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useSearchParams } from "react-router"
 import { KeyRoundIcon, MailIcon, ShieldCheckIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -16,11 +17,13 @@ import { TwoFADialog, type TwoFAAction } from "./two-fa-dialog"
 function SettingRow({
   icon: Icon,
   title,
+  badge,
   description,
   action,
 }: {
   icon: React.ComponentType<{ className?: string }>
   title: string
+  badge?: React.ReactNode
   description: React.ReactNode
   action: React.ReactNode
 }) {
@@ -30,7 +33,10 @@ function SettingRow({
         <Icon className="size-4" aria-hidden="true" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="font-medium">{title}</span>
+        <span className="flex items-center gap-2">
+          <span className="font-medium">{title}</span>
+          {badge}
+        </span>
         <span className="truncate text-sm text-muted-foreground">
           {description}
         </span>
@@ -47,7 +53,11 @@ export function LoginAuthCard({
   user: SelfProfile | undefined
   loading: boolean
 }) {
-  const [dialog, setDialog] = useState<"password" | "email" | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  // /security?bind=email (from the profile page) opens the email dialog.
+  const [dialog, setDialog] = useState<"password" | "email" | null>(
+    searchParams.get("bind") === "email" ? "email" : null
+  )
   const [twoFAAction, setTwoFAAction] = useState<TwoFAAction | null>(null)
   const twoFA = useTwoFAStatus()
   const email = user?.email?.trim() || undefined
@@ -91,16 +101,20 @@ export function LoginAuthCard({
             <SettingRow
               icon={MailIcon}
               title="邮箱"
+              badge={
+                email && (
+                  <Badge variant="success" className="h-5 shrink-0 px-2">
+                    已绑定
+                  </Badge>
+                )
+              }
               description={
                 email ? <span className="break-all">{email}</span> : "未绑定"
               }
               action={
-                <div className="flex items-center gap-2">
-                  {email && <Badge variant="success">已绑定</Badge>}
-                  <Button variant="outline" onClick={() => setDialog("email")}>
-                    {email ? "更换" : "绑定"}
-                  </Button>
-                </div>
+                <Button variant="outline" onClick={() => setDialog("email")}>
+                  {email ? "更换" : "绑定"}
+                </Button>
               }
             />
           </>
@@ -117,7 +131,17 @@ export function LoginAuthCard({
       />
       <EmailBindingDialog
         open={dialog === "email"}
-        onOpenChange={(open) => setDialog(open ? "email" : null)}
+        onOpenChange={(open) => {
+          setDialog(open ? "email" : null)
+          if (!open && searchParams.has("bind"))
+            setSearchParams(
+              (params) => {
+                params.delete("bind")
+                return params
+              },
+              { replace: true }
+            )
+        }}
         currentEmail={email}
       />
     </Card>

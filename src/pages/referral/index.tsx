@@ -85,9 +85,9 @@ function rebateStatus(row: ReferralRebate) {
   if (row.credited_at > 0)
     return { label: "已到账", variant: "success" } as const
   if (row.exchange_rate_pending === true)
-    return { label: "待汇率", variant: "neutral" } as const
+    return { label: "待汇率", variant: "warning" } as const
   if (row.rebate_quota > 0)
-    return { label: "待入账", variant: "neutral" } as const
+    return { label: "待入账", variant: "warning" } as const
   return null
 }
 
@@ -272,7 +272,7 @@ export default function ReferralPage() {
       <div
         className={cn(
           "grid items-start gap-6",
-          invitation && "lg:grid-cols-[2fr_3fr]"
+          invitation && "lg:grid-cols-[2fr_5fr]"
         )}
       >
         {invitation && (
@@ -632,6 +632,7 @@ function RecordsCard({
                 <TableRow>
                   <TableHead>时间</TableHead>
                   <TableHead>类型</TableHead>
+                  <TableHead>被邀用户</TableHead>
                   <TableHead>说明</TableHead>
                   <TableHead className="text-right">返利</TableHead>
                   <TableHead>状态</TableHead>
@@ -666,12 +667,12 @@ function rowKind(row: ReferralRebate, config: SiteStatus | undefined) {
     return { label: "邀新返利", detail: "邀请新用户注册" }
   if (row.redemption_quota !== undefined)
     return {
-      label: "兑换码返利",
-      detail: `兑换 ${formatQuota(row.redemption_quota, config)} · 比例 ${formatRate(row.rate_bps)}`,
+      label: "充值返利",
+      detail: `兑换码充值 ${formatQuota(row.redemption_quota, config)} · 比例 ${formatRate(row.rate_bps)}`,
     }
   return {
     label: "充值返利",
-    detail: `实付 ${row.paid_amount} ${row.paid_currency} · 比例 ${formatRate(row.rate_bps)}`,
+    detail: `在线充值实付 ${row.paid_amount} ${row.paid_currency} · 比例 ${formatRate(row.rate_bps)}`,
   }
 }
 
@@ -696,7 +697,6 @@ function RewardTableRow({
     status && remaining !== null && remaining > 0
       ? `${formatRemaining(remaining)}后入账`
       : status?.label
-  const when = row.credited_at > 0 ? formatUnixSeconds(row.credited_at) : null
   return (
     <TableRow className="border-0 even:bg-row-alt">
       <TableCell className="py-3 text-muted-foreground tabular-nums">
@@ -706,29 +706,20 @@ function RewardTableRow({
         <Badge variant="neutral">{kind.label}</Badge>
       </TableCell>
       <TableCell className="py-3">
-        <div className="flex flex-col">
-          <span className="font-medium">{row.username || "—"}</span>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {kind.detail}
-          </span>
-        </div>
+        <span className="font-medium">{row.username || "—"}</span>
+      </TableCell>
+      <TableCell className="py-3 text-muted-foreground tabular-nums">
+        {kind.detail}
       </TableCell>
       <TableCell className="py-3 text-right font-medium tabular-nums">
         +{formatQuota(row.rebate_quota, config)}
       </TableCell>
       <TableCell className="py-3">
-        <div className="flex flex-col items-start gap-0.5">
-          {status ? (
-            <Badge variant={status.variant}>{label}</Badge>
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )}
-          {when && (
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {when}
-            </span>
-          )}
-        </div>
+        {status ? (
+          <Badge variant={status.variant}>{label}</Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
     </TableRow>
   )

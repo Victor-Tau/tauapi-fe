@@ -190,7 +190,9 @@ export function SessionsCard({
                           {device.name}
                         </span>
                         {session.current && (
-                          <Badge variant="success">当前设备</Badge>
+                          <Badge variant="success" className="h-5 px-2">
+                            当前设备
+                          </Badge>
                         )}
                       </span>
                       <span className="text-xs text-muted-foreground tabular-nums">

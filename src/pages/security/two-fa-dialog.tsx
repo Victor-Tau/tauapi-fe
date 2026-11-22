@@ -151,7 +151,7 @@ function VerifyStep({
     ? null
     : method === "2fa"
       ? "请输入两步验证码"
-      : "请输入当前密码"
+      : "请输入当前登录密码"
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -212,7 +212,7 @@ function VerifyStep({
       <FieldGroup className="gap-4">
         <Field data-invalid={(submitted && !!secretError) || undefined}>
           <FieldLabel htmlFor="twofa-verify">
-            {isCode ? "两步验证码" : "当前密码"}
+            {isCode ? "两步验证码" : "登录密码"}
           </FieldLabel>
           <Input
             id="twofa-verify"

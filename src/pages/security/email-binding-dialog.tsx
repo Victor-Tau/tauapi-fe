@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/dialog"
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -63,9 +62,15 @@ export function EmailBindingDialog({
         <DialogHeader>
           <DialogTitle>{replacing ? "更换邮箱" : "绑定邮箱"}</DialogTitle>
           <DialogDescription>
-            {replacing
-              ? `当前绑定：${currentEmail}。新邮箱验证通过后替换。`
-              : "绑定后可用于接收账户安全通知。"}
+            {replacing ? (
+              <>
+                当前绑定：{currentEmail}
+                <br />
+                新邮箱验证通过后替换。
+              </>
+            ) : (
+              "绑定后可用于接收账户安全通知。"
+            )}
           </DialogDescription>
         </DialogHeader>
         {/* The popup unmounts once closed, so each opening starts afresh. */}
@@ -127,7 +132,7 @@ function AddressStep({
       ? null
       : method === "2fa"
         ? "请输入两步验证码"
-        : "请输入当前密码",
+        : "请输入当前登录密码",
   }
 
   async function submit(event: FormEvent) {
@@ -210,17 +215,17 @@ function AddressStep({
             </>
           ) : (
             <>
-              <FieldLabel htmlFor="bind-secret">当前密码</FieldLabel>
+              <FieldLabel htmlFor="bind-secret">密码</FieldLabel>
               <Input
                 id="bind-secret"
                 type="password"
                 autoComplete="current-password"
+                placeholder="当前账号的登录密码"
                 value={secret}
                 onChange={(event) => setSecret(event.target.value)}
               />
             </>
           )}
-          <FieldDescription>用于确认是您本人在操作。</FieldDescription>
           {show(errors.secret)}
         </Field>
         <ErrorLine message={error} />

@@ -7,9 +7,9 @@
 
 const CODE_MESSAGES: Record<string, string> = {
   // Security verification and account changes
-  CURRENT_PASSWORD_INVALID: "当前密码不正确。",
-  PASSWORD_POLICY_REJECTED: "新密码不符合要求（8–128 个字符，且不能与当前密码相同）。",
-  SECURITY_VERIFICATION_FAILED: "验证失败：当前密码或验证码不正确。",
+  CURRENT_PASSWORD_INVALID: "当前登录密码不正确。",
+  PASSWORD_POLICY_REJECTED: "新密码不符合要求（8–128 个字符，且不能与当前登录密码相同）。",
+  SECURITY_VERIFICATION_FAILED: "验证失败：当前登录密码或验证码不正确。",
   SECURITY_VERIFICATION_LOCKED: "验证失败次数过多，请稍后再试。",
   SECURITY_VERIFICATION_FLOW_REQUIRED: "该验证方式需要单独的验证流程，当前页面暂不支持。",
   TWOFA_CODE_INVALID: "验证码不正确。",
