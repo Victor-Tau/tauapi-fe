@@ -3,7 +3,11 @@ import { GiftIcon, ReceiptTextIcon, UsersIcon } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { ApiError } from "@/api/errors"
-import { isAwaitingCredit, type ReferralRebate } from "@/api/referral"
+import {
+  isAwaitingCredit,
+  isCancelled,
+  type ReferralRebate,
+} from "@/api/referral"
 import { CopyButton } from "@/components/copy-button"
 import { DataPagination, pageCountOf } from "@/components/data-pagination"
 import { ErrorAlert } from "@/components/error-alert"
@@ -82,6 +86,8 @@ function useMinuteClock(active: boolean) {
 }
 
 function rebateStatus(row: ReferralRebate) {
+  // Order matters: cancelled_at first, then credited_at.
+  if (isCancelled(row)) return { label: "已取消", variant: "neutral" } as const
   if (row.credited_at > 0)
     return { label: "已到账", variant: "success" } as const
   if (row.exchange_rate_pending === true)
@@ -192,6 +198,16 @@ export default function ReferralPage() {
 
   const rate = formatRate(permissions.data.rate_bps ?? 0)
   const inviteeCount = invitees.data?.total ?? self.data?.aff_count
+  // Credited top-up rebates only; pending and cancelled ones are excluded.
+  const topupRebateTotal = (rebates.data?.items ?? []).reduce(
+    (sum, row) =>
+      row.record_type === "topup_rebate" &&
+      !isCancelled(row) &&
+      row.credited_at > 0
+        ? sum + row.rebate_quota
+        : sum,
+    0
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -220,10 +236,9 @@ export default function ReferralPage() {
         )}
         {rebate && (
           <StatCard
-            label="返利记录"
-            value={formatNumber(rebates.data?.total)}
-            unit="笔"
-            loading={rebates.isPending}
+            label="累计充值返利"
+            value={formatQuota(topupRebateTotal, site.data)}
+            loading={rebates.isPending || site.isPending}
           />
         )}
       </div>
@@ -687,6 +702,7 @@ function RewardTableRow({
 }) {
   const kind = rowKind(row, config)
   const status = rebateStatus(row)
+  const cancelled = isCancelled(row)
   const remaining =
     isAwaitingCredit(row) && row.remaining_seconds !== undefined
       ? row.remaining_seconds - elapsed
@@ -706,12 +722,23 @@ function RewardTableRow({
         <Badge variant="neutral">{kind.label}</Badge>
       </TableCell>
       <TableCell className="py-3">
-        <span className="font-medium">{row.username || "—"}</span>
+        {row.username ? (
+          <span className="font-medium">{row.username}</span>
+        ) : (
+          // Deleted invitees come back with an empty username.
+          <span className="text-muted-foreground">已删除用户</span>
+        )}
       </TableCell>
       <TableCell className="py-3 text-muted-foreground tabular-nums">
         {kind.detail}
       </TableCell>
-      <TableCell className="py-3 text-right font-medium tabular-nums">
+      <TableCell
+        className={cn(
+          "py-3 text-right font-medium tabular-nums",
+          // Cancelled rewards keep their original amount but never arrive.
+          cancelled && "text-muted-foreground line-through"
+        )}
+      >
         +{formatQuota(row.rebate_quota, config)}
       </TableCell>
       <TableCell className="py-3">

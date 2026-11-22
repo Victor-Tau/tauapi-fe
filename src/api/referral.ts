@@ -42,6 +42,8 @@ export interface ReferralRebate {
   created_at: number
   /** Credit time, Unix seconds; 0 = not credited yet. */
   credited_at: number
+  /** Cancellation time, Unix seconds; only present (> 0) once the invitation reward was cancelled. */
+  cancelled_at?: number
   /** Earliest credit time, Unix seconds. */
   available_at?: number
   exchange_rate_pending?: boolean
@@ -104,6 +106,10 @@ const rebateSchema: z.ZodType<ReferralRebate> = z.object({
   redemption_quota: z.number().finite().optional(),
   created_at: integer,
   credited_at: integer,
+  cancelled_at: integer
+    .nullable()
+    .optional()
+    .transform((value) => value ?? undefined),
   available_at: integer.optional(),
   exchange_rate_pending: z.boolean().optional(),
   remaining_seconds: z
@@ -115,9 +121,15 @@ const rebateSchema: z.ZodType<ReferralRebate> = z.object({
     ),
 })
 
-/** Not credited yet and not blocked on an exchange rate. */
+/** Cancelled before credit (e.g. the invited user was deleted). Checked before credited_at. */
+export function isCancelled(row: ReferralRebate): boolean {
+  return (row.cancelled_at ?? 0) > 0
+}
+
+/** Not cancelled, not credited yet and not blocked on an exchange rate. */
 export function isAwaitingCredit(row: ReferralRebate): boolean {
   return (
+    !isCancelled(row) &&
     row.credited_at <= 0 &&
     row.exchange_rate_pending !== true &&
     row.rebate_quota > 0
