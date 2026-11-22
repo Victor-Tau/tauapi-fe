@@ -3,6 +3,7 @@ import { ApiError, asApiError } from './errors'
 import { serverErrorMessage } from './messages'
 import { authBundleSchema, encryptionSchema, parseData, rotationSchema, type AuthBundle } from './schema'
 import { encryptedPasswordFields } from './password'
+import { queryString } from './shared'
 
 export { ApiError, errorMessage } from './errors'
 
@@ -241,7 +242,7 @@ export class ApiClient {
       const fields = await encryptedPasswordFields(input.password, config)
       // A logout may have been requested while the encryption config was loading.
       if (generation !== this.generation) throw new ApiError('登录已取消。', 401, 'AUTH_CHANGED')
-      const data = await this.raw('/api/user/login', {
+      const data = await this.raw(`/api/user/login${queryString({ turnstile: input.turnstileToken })}`, {
         method: 'POST', auth: false, body: { username: input.username.trim(), ...fields },
       })
       if (generation !== this.generation) throw new ApiError('会话已变更，请重试登录。', 401, 'AUTH_CHANGED')

@@ -81,6 +81,7 @@ export interface SiteStatus {
   password_login_enabled?: boolean
   password_login_encryption_enabled?: boolean
   turnstile_check?: boolean
+  turnstile_site_key?: string
   register_enabled?: boolean
   password_register_enabled?: boolean
   email_verification?: boolean
@@ -201,6 +202,7 @@ export type UserGroups = Record<string, { desc?: string; ratio?: number | 'auto'
 export interface LoginInput {
   username: string
   password: string
+  turnstileToken?: string
 }
 
 export interface DateRange {

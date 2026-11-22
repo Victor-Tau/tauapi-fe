@@ -20,6 +20,7 @@ import {
   AUTH_LINK,
   AuthShell,
 } from "@/components/auth-shell"
+import { AuthTurnstile } from "@/components/auth-turnstile"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -37,9 +38,11 @@ import {
 } from "@/components/ui/input-group"
 import { Spinner } from "@/components/ui/spinner"
 import { useAuth } from "@/hooks/use-auth"
+import { useAuthTurnstile } from "@/hooks/use-auth-turnstile"
 
 export default function LoginPage() {
   const auth = useAuth()
+  const turnstile = useAuthTurnstile()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [passwordVisible, setPasswordVisible] = useState(false)
@@ -58,7 +61,7 @@ export default function LoginPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending) return
+    if (pending || restoring || !turnstile.ready) return
     if (!username.trim() || !password) {
       setFormError("请输入用户名或邮箱，以及密码。")
       return
@@ -67,7 +70,9 @@ export default function LoginPage() {
     setFormError("")
     try {
       // On success the guest guard redirects to the validated `next` path.
-      const result = await auth.login({ username: username.trim(), password })
+      const result = await turnstile.withToken((turnstileToken) =>
+        auth.login({ username: username.trim(), password, turnstileToken })
+      )
       if (result.kind === "challenge") {
         setChallenge(result.flowToken)
         setCode("")
@@ -249,6 +254,7 @@ export default function LoginPage() {
                 </Link>
               </div>
             </Field>
+            <AuthTurnstile check={turnstile} />
             {shownError && (
               <Alert variant="destructive">
                 <CircleAlertIcon />
@@ -276,7 +282,7 @@ export default function LoginPage() {
                 type="submit"
                 size="lg"
                 className={AUTH_BUTTON}
-                disabled={pending || restoring}
+                disabled={pending || restoring || !turnstile.ready}
               >
                 {pending || restoring ? (
                   <Spinner data-icon="inline-start" />

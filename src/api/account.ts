@@ -4,8 +4,8 @@ import { parseData } from './schema'
 import { queryString } from './shared'
 
 /** Mails a 6-digit code for registration (only when email verification is on). */
-export async function sendRegisterCode(email: string) {
-  await apiClient.request(`/api/verification${queryString({ email })}`, { auth: false })
+export async function sendRegisterCode(email: string, turnstile?: string) {
+  await apiClient.request(`/api/verification${queryString({ email, turnstile })}`, { auth: false })
 }
 
 export interface RegisterInput {
@@ -18,13 +18,15 @@ export interface RegisterInput {
 }
 
 /** Creates the account; it does not sign in. */
-export async function registerAccount(input: RegisterInput) {
-  await apiClient.request('/api/user/register', { method: 'POST', auth: false, body: input })
+export async function registerAccount(input: RegisterInput, turnstile?: string) {
+  await apiClient.request(`/api/user/register${queryString({ turnstile })}`, {
+    method: 'POST', auth: false, body: input,
+  })
 }
 
 /** Always succeeds, so it never reveals whether the address has an account. */
-export async function sendPasswordReset(email: string) {
-  await apiClient.request(`/api/reset_password${queryString({ email })}`, { auth: false })
+export async function sendPasswordReset(email: string, turnstile?: string) {
+  await apiClient.request(`/api/reset_password${queryString({ email, turnstile })}`, { auth: false })
 }
 
 /** Consumes the mailed link; the server sets and returns a random new password. */

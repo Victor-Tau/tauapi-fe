@@ -97,7 +97,7 @@ const KEY_MESSAGES: Record<string, string> = {
   "The access token lacks the required permission: {{scope}}": "访问令牌缺少所需权限：{{scope}}。",
   "The current sign-in method does not support security verification": "当前登录方式不支持安全验证。",
   "Turnstile token is empty": "请先完成人机验证。",
-  "Turnstile verification failed, please refresh and try again!": "人机验证失败，请刷新页面后重试。",
+  "Turnstile verification failed, please refresh and try again!": "人机验证失败，请重新验证后重试。",
   // Registration, email and password reset
   "New user registration has been disabled by administrator": "管理员已关闭新用户注册。",
   "Password registration has been disabled by administrator, please use third-party account verification":

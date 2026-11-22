@@ -47,6 +47,10 @@ location / {
 }
 ```
 
+登录、注册和找回密码页面从 `GET /api/status` 读取 Turnstile 开关和公开站点密钥。启用后，`POST /api/user/login`、`POST /api/user/register`、`GET /api/verification` 和 `GET /api/reset_password` 都通过查询参数 `turnstile` 将令牌传给后端校验。Nginx 白名单按方法和路径匹配，反代保留查询参数。这四个接口的访问日志应省略查询参数。
+
+Turnstile 脚本和 iframe 由浏览器从 `https://challenges.cloudflare.com` 加载。部署若设置了 CSP，需允许该域名用于脚本和 iframe。
+
 ## 目录
 
 ```

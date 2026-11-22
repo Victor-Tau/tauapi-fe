@@ -11,25 +11,25 @@ import {
   AUTH_LINK,
   AuthShell,
 } from "@/components/auth-shell"
+import { AuthTurnstile } from "@/components/auth-turnstile"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import { useSiteStatus } from "@/hooks/use-queries"
+import { useAuthTurnstile } from "@/hooks/use-auth-turnstile"
 
 export default function ForgotPasswordPage() {
-  const site = useSiteStatus()
+  const turnstile = useAuthTurnstile()
   const [email, setEmail] = useState("")
   const [typing, setTyping] = useState(false)
   const [pending, setPending] = useState(false)
   const [sentTo, setSentTo] = useState("")
   const [formError, setFormError] = useState("")
-  const turnstile = site.data?.turnstile_check === true
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending || turnstile) return
+    if (pending || !turnstile.ready) return
     const value = email.trim()
     if (!/^\S+@\S+\.\S+$/.test(value)) {
       setFormError("请输入有效的邮箱地址。")
@@ -38,7 +38,7 @@ export default function ForgotPasswordPage() {
     setPending(true)
     setFormError("")
     try {
-      await sendPasswordReset(value)
+      await turnstile.withToken((token) => sendPasswordReset(value, token))
       setSentTo(value)
     } catch (error) {
       setFormError(errorMessage(error))
@@ -84,15 +84,6 @@ export default function ForgotPasswordPage() {
       ) : (
         <form onSubmit={submit} noValidate>
           <FieldGroup className="gap-8">
-            {turnstile && (
-              <Alert>
-                <CircleAlertIcon />
-                <AlertTitle>暂不可用</AlertTitle>
-                <AlertDescription>
-                  服务器启用了人机验证，当前页面暂不支持，请联系管理员。
-                </AlertDescription>
-              </Alert>
-            )}
             <Field>
               <FieldLabel className={AUTH_LABEL} htmlFor="forgot-email">
                 邮箱
@@ -111,6 +102,7 @@ export default function ForgotPasswordPage() {
                 autoFocus
               />
             </Field>
+            <AuthTurnstile check={turnstile} />
             {formError && (
               <Alert variant="destructive">
                 <CircleAlertIcon />
@@ -123,7 +115,7 @@ export default function ForgotPasswordPage() {
                 type="submit"
                 size="lg"
                 className={AUTH_BUTTON}
-                disabled={pending || turnstile}
+                disabled={pending || !turnstile.ready}
               >
                 {pending && <Spinner data-icon="inline-start" />}
                 {pending ? "正在发送…" : "发送重置链接"}

@@ -58,6 +58,7 @@ export const statusSchema: z.ZodType<SiteStatus> = z.object({
   password_login_enabled: z.boolean().optional(),
   password_login_encryption_enabled: z.boolean().optional(),
   turnstile_check: z.boolean().optional(),
+  turnstile_site_key: z.string().trim().optional().catch(undefined),
   register_enabled: z.boolean().optional(),
   password_register_enabled: z.boolean().optional(),
   email_verification: z.boolean().optional(),

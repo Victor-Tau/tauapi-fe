@@ -13,6 +13,7 @@ import {
   AUTH_LINK,
   AuthShell,
 } from "@/components/auth-shell"
+import { AuthTurnstile } from "@/components/auth-turnstile"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -28,7 +29,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Spinner } from "@/components/ui/spinner"
-import { useSiteStatus } from "@/hooks/use-queries"
+import { useAuthTurnstile } from "@/hooks/use-auth-turnstile"
 import { PASSWORD_RULES, passwordMeetsPolicy } from "@/lib/password-policy"
 import { cn } from "@/lib/utils"
 import { CodeInput } from "./code-input"
@@ -71,7 +72,7 @@ function shakeFields(keys: FieldKey[]) {
 }
 
 export default function RegisterPage() {
-  const site = useSiteStatus()
+  const turnstile = useAuthTurnstile()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [username, setUsername] = useState("")
@@ -95,14 +96,9 @@ export default function RegisterPage() {
     return () => window.clearTimeout(id)
   }, [cooldown])
 
-  const status = site.data
   // Registration is email-only: the address and its code are always required.
-  const disabled =
-    status?.register_enabled === false
-      ? "管理员已关闭新用户注册。"
-      : status?.turnstile_check
-        ? "服务器启用了人机验证，当前页面暂不支持，请联系管理员。"
-        : ""
+  const registrationDisabled = turnstile.site.data?.register_enabled === false
+  const canSubmit = !pending && !sending && !registrationDisabled && turnstile.ready
 
   const confirmMatches = confirm.length > 0 && confirm === password
 
@@ -191,11 +187,11 @@ export default function RegisterPage() {
   }
 
   async function sendCode() {
-    if (sending || cooldown > 0) return
+    if (!canSubmit || cooldown > 0) return
     if (flag({ ...errors, email: emailError() })) return
     setSending(true)
     try {
-      await sendRegisterCode(email.trim())
+      await turnstile.withToken((token) => sendRegisterCode(email.trim(), token))
       setCooldown(RESEND_SECONDS)
       toast.success("验证码已发送，请查收邮件")
     } catch (error) {
@@ -213,7 +209,7 @@ export default function RegisterPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending || disabled) return
+    if (!canSubmit) return
     setSubmitted(true)
     const keys = Object.keys(FIELDS) as FieldKey[]
     const invalid = flag(
@@ -222,14 +218,20 @@ export default function RegisterPage() {
     if (invalid) return
     setPending(true)
     try {
-      await registerAccount({
-        username: username.trim(),
-        password,
-        email: email.trim(),
-        // The backend issues lowercase hex and compares case-sensitively.
-        verification_code: code.toLowerCase(),
-        ...(params.get("aff") ? { aff_code: params.get("aff")! } : {}),
-      })
+      const inviter = params.get("aff")
+      await turnstile.withToken((token) =>
+        registerAccount(
+          {
+            username: username.trim(),
+            password,
+            email: email.trim(),
+            // The backend issues lowercase hex and compares case-sensitively.
+            verification_code: code.toLowerCase(),
+            ...(inviter ? { aff_code: inviter } : {}),
+          },
+          token
+        )
+      )
       toast.success("注册成功，请登录")
       navigate("/login", { replace: true, viewTransition: true })
     } catch (error) {
@@ -313,7 +315,7 @@ export default function RegisterPage() {
                   size="xs"
                   className={AUTH_HIT}
                   onClick={() => void sendCode()}
-                  disabled={sending || cooldown > 0 || pending}
+                  disabled={!canSubmit || cooldown > 0}
                 >
                   {sending && <Spinner />}
                   {cooldown > 0 ? `${cooldown} 秒后重发` : "发送验证码"}
@@ -326,6 +328,13 @@ export default function RegisterPage() {
               </FieldError>
             )}
           </Field>
+          {!registrationDisabled && (
+            <AuthTurnstile check={turnstile}>
+              <p className="text-sm text-muted-foreground">
+                发送邮箱验证码和注册各需完成一次人机验证。
+              </p>
+            </AuthTurnstile>
+          )}
           <Field data-invalid={!!errors.code || undefined}>
             <FieldLabel className={AUTH_LABEL} htmlFor="reg-code">
               验证码
@@ -451,7 +460,7 @@ export default function RegisterPage() {
               type="submit"
               size="lg"
               className={AUTH_BUTTON}
-              disabled={pending || !!disabled}
+              disabled={!canSubmit}
             >
               {pending && <Spinner data-icon="inline-start" />}
               {pending ? "正在注册…" : "注册"}

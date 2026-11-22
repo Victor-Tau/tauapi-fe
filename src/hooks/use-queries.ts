@@ -37,11 +37,14 @@ import { growthWindowDays, vipTiers } from "@/utils/vip"
 export const KEYS_PAGE_SIZE = 10
 export const LOGS_PAGE_SIZE = 10
 
-export function useSiteStatus() {
+export function useSiteStatus(
+  { refetchOnMount }: { refetchOnMount?: "always" } = {}
+) {
   return useQuery({
     queryKey: queryKeys.status,
     queryFn: ({ signal }) => getStatus(signal),
     staleTime: 5 * 60_000,
+    refetchOnMount,
   })
 }
 
