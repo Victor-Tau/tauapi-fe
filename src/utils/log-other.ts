@@ -157,6 +157,15 @@ export function isWebSearch(log: UsageLog): boolean {
   return /\/alpha\/search\/?$/.test(log.other?.request_path ?? '')
 }
 
+/**
+ * Fast mode: a matched request rule of the billing expression tests
+ * `param("service_tier")` for "fast" or "priority", e.g.
+ * `param("service_tier") == "priority"`.
+ */
+export function isPriorityTier(log: UsageLog): boolean {
+  return (log.other?.request_rules ?? []).some((rule) => rule.matched && isFastRule(rule))
+}
+
 /** Time to first token in ms, only for streamed calls that recorded it. */
 export function firstTokenMs(log: UsageLog): number | null {
   const frt = log.other?.frt
@@ -255,6 +264,29 @@ export interface CostBreakdown {
   ratio?: number
   /** Tiered billing: the condition of the tier that applied, when several exist. */
   tierLabel?: string
+  /** Short form of the tier condition for the ratio formula, e.g. ">500K". */
+  tierShort?: string
+  /** This request's charge on the matched tier relative to the first tier (≠ 1 only). */
+  tierFactor?: number
+  /** Matched request-rule multipliers, e.g. { label: "fast", multiplier: 2 }. */
+  ruleFactors?: { label: string; multiplier: number }[]
+}
+
+type RequestRuleLog = NonNullable<LogOther['request_rules']>[number]
+
+/** A rule that tests `param("service_tier")` for "fast" or "priority". */
+function isFastRule(rule: RequestRuleLog): boolean {
+  return (
+    !rule.cond.includes('!=') &&
+    /service_tier/.test(rule.cond) &&
+    /["'](fast|priority)["']/i.test(rule.cond)
+  )
+}
+
+function matchedRuleFactors(other: LogOther): { label: string; multiplier: number }[] {
+  return (other.request_rules ?? [])
+    .filter((rule) => rule.matched && rule.multiplier !== 1)
+    .map((rule) => ({ label: isFastRule(rule) ? 'fast' : rule.cond, multiplier: rule.multiplier }))
 }
 
 function decodeBase64Utf8(value: string): string | null {
@@ -266,13 +298,54 @@ function decodeBase64Utf8(value: string): string | null {
 }
 
 /** The expression tier a tiered log was charged with. */
-function matchedTier(other: LogOther): { tier: PriceTier; label?: string } | null {
+function matchedTier(
+  other: LogOther
+): { tier: PriceTier; label?: string; short?: string; base: PriceTier; first: boolean } | null {
   const expression = other.expr_b64 ? decodeBase64Utf8(other.expr_b64) : null
   const tiers = expression ? parseBillingExpr(expression) : null
   if (!tiers?.length) return null
   const index = other.matched_tier ? tiers.findIndex((tier) => tier.name === other.matched_tier) : tiers.length === 1 ? 0 : -1
   if (index < 0) return null
-  return { tier: tiers[index]!, label: tiers.length > 1 ? tierConditionText(tiers, index, true) ?? undefined : undefined }
+  const label = tiers.length > 1 ? tierConditionText(tiers, index, true) ?? undefined : undefined
+  // "上下文 > 500K" → ">500K"
+  const short = label?.replace(/^\S+\s+/, '').replace(/\s+/g, '').replace(/\.0+(?=\D*$)/, '')
+  return { tier: tiers[index]!, label, short, base: tiers[0]!, first: index === 0 }
+}
+
+/** Cost of this request's tokens at a tier's base prices (USD), or null if not token-priced. */
+function tierTokenCost(log: UsageLog, other: LogOther, tier: PriceTier): number | null {
+  if (tier.fixed != null) return tier.fixed
+  const tokens = tokenBreakdown(log)
+  if (!tokens) return null
+  const billed = other.billing_tokens ?? {}
+  const prices = tier.prices
+  const cc = prices.cc ?? 0
+  return (
+    tokens.normalInput * (prices.p ?? 0) +
+    tokens.output * (prices.c ?? 0) +
+    tokens.cacheRead * (prices.cr ?? 0) +
+    (billed.cc ?? (billed.cc1h || billed.cc12h ? 0 : tokens.cacheWrite)) * cc +
+    (billed.cc1h ?? 0) * (prices.cc1h ?? cc) +
+    (billed.cc12h ?? 0) * (prices.cc12h ?? cc)
+  )
+}
+
+function tierExtras(log: UsageLog, other: LogOther, match: NonNullable<ReturnType<typeof matchedTier>>) {
+  const extras: Pick<CostBreakdown, 'tierLabel' | 'tierShort' | 'tierFactor'> = {
+    tierLabel: match.label,
+    tierShort: match.short,
+  }
+  if (!match.first) {
+    // The tier multiplier is quoted on the input price (e.g. >500K doubles it);
+    // fall back to this request's cost ratio when input is not priced.
+    const ownInput = match.tier.prices.p
+    const baseInput = match.base.prices.p
+    const byInput = ownInput != null && baseInput != null && baseInput > 0
+    const own = byInput ? ownInput : tierTokenCost(log, other, match.tier)
+    const base = byInput ? baseInput : tierTokenCost(log, other, match.base)
+    if (own != null && base != null && base > 0 && Math.abs(own / base - 1) > 1e-9) extras.tierFactor = own / base
+  }
+  return extras
 }
 
 function tieredCost(log: UsageLog, other: LogOther, ratio: number | undefined): CostBreakdown | null {
@@ -281,9 +354,14 @@ function tieredCost(log: UsageLog, other: LogOther, ratio: number | undefined): 
   if (match?.tier.fixed != null || perRequest) {
     const factor = (other.request_rules ?? []).reduce((acc, rule) => (rule.matched ? acc * rule.multiplier : acc), 1)
     const callPrice = other.fixed_price ?? (match?.tier.fixed != null ? match.tier.fixed * factor : undefined)
-    return { ...(callPrice != null ? { callPrice } : {}), ratio, tierLabel: match?.label }
+    return {
+      ...(callPrice != null ? { callPrice } : {}),
+      ratio,
+      ...(match ? tierExtras(log, other, match) : {}),
+      ruleFactors: matchedRuleFactors(other),
+    }
   }
-  if (!match) return ratio == null ? null : { ratio }
+  if (!match) return { ratio, ruleFactors: matchedRuleFactors(other) }
   // Matched request rules (e.g. service_tier = priority → ×2) scale every price.
   const factor = (other.request_rules ?? []).reduce((acc, rule) => (rule.matched ? acc * rule.multiplier : acc), 1)
   const prices = Object.fromEntries(
@@ -306,7 +384,8 @@ function tieredCost(log: UsageLog, other: LogOther, ratio: number | undefined): 
       perToken(billed.cc1h ?? 0, prices.cc1h ?? writePrice) +
       perToken(billed.cc12h ?? 0, prices.cc12h ?? writePrice),
     ratio,
-    tierLabel: match.label,
+    ...tierExtras(log, other, match),
+    ruleFactors: matchedRuleFactors(other),
   }
 }
 

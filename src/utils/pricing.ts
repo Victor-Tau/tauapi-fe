@@ -253,11 +253,11 @@ export function modelPricing(model: PricingModel, config?: SiteStatus): ModelPri
   return { kind: 'tokens', tiers: [{ prices }], rules: [] }
 }
 
-/** Human label for a request rule's condition, e.g. "FAST模式". */
+/** Human label for a request rule's condition, e.g. "Fast". */
 export function requestRuleText(rule: RequestRule): string {
   const value = String(rule.value)
   if (rule.source === 'param' && rule.key === 'service_tier' && rule.op === '==' && value === 'priority') {
-    return 'FAST模式'
+    return 'Fast'
   }
   const subject = rule.source === 'param' ? `请求参数 ${rule.key}` : `请求头 ${rule.key}`
   const verb = rule.op === 'has' ? '包含' : rule.op === '!=' ? '≠' : '='

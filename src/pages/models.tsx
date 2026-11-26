@@ -992,10 +992,10 @@ function ModelDetail({
             {pricing.kind !== "custom" && pricing.rules.length > 0 && (
               <div className="flex flex-col rounded-xl bg-popover-inner">
                 <div className="border-b border-divider px-3 py-2 text-xs text-muted-foreground">
-                  请求倍率
+                  服务挡位倍率
                 </div>
                 <dl className="flex flex-col px-3">
-                  <DetailRow label="标准模式" value="×1" />
+                  <DetailRow label="Standard" value="×1" />
                   {pricing.rules.map((rule, index) => (
                     <DetailRow
                       key={index}

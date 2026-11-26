@@ -10,6 +10,7 @@ import {
   EyeIcon,
   GlobeIcon,
   InfoIcon,
+  ZapIcon,
 } from "lucide-react"
 import { cn } from "cn"
 
@@ -46,8 +47,10 @@ import {
   costBreakdown,
   firstTokenMs,
   firstTokenTone,
+  isPriorityTier,
   isWebSearch,
   tokenBreakdown,
+  type CostBreakdown,
   type Tone,
 } from "@/utils/log-other"
 
@@ -250,8 +253,8 @@ const WEB_SEARCH_ROW: DetailRow = {
 
 /**
  * Billing breakdown ("计费明细"). Parts are reconstructed from the logged
- * ratios or the matched billing tier; 总费用 is the amount actually charged,
- * 标准费用 the same charge at the 1x group ratio.
+ * ratios or the matched billing tier; 总费用 is the amount actually charged.
+ * 倍率 spells out its factors: group ratio × tier × request rules (fast).
  */
 export function billingRows(
   log: UsageLog,
@@ -296,24 +299,50 @@ export function billingRows(
       summary: true,
     })
   }
+  rows.push({
+    label: "服务档位",
+    value: isPriorityTier(log) ? "Fast" : "Standard",
+    tone: "muted",
+    summary: true,
+  })
   if (cost?.ratio != null) {
     rows.push({
       label: "倍率",
-      value: `${cost.ratio.toFixed(2)}x`,
+      value: ratioFormula(cost),
       tone: "muted",
       summary: true,
     })
   }
   rows.push({ label: "总费用", value: total, summary: true })
-  if (totalUsd != null && cost?.ratio != null && cost.ratio > 0) {
-    rows.push({
-      label: "标准费用",
-      value: formatMoney(totalUsd / cost.ratio, config),
-      tone: "muted",
-      summary: true,
-    })
-  }
   return rows
+}
+
+function trimNumber(value: number): string {
+  return String(Number(value.toFixed(2)))
+}
+
+/**
+ * "0.14x", or with factors "0.56x = 0.14x2(>500K)x2(fast)". The total is
+ * rounded from the exact product, not from the rounded factors.
+ */
+function ratioFormula(cost: CostBreakdown): string {
+  const ratio = cost.ratio ?? 1
+  const factors: string[] = []
+  if (cost.tierFactor != null) {
+    factors.push(
+      `x${trimNumber(cost.tierFactor)}${cost.tierShort ? `(${cost.tierShort})` : ""}`
+    )
+  }
+  for (const rule of cost.ruleFactors ?? []) {
+    factors.push(`x${trimNumber(rule.multiplier)}(${rule.label})`)
+  }
+  const base = `${ratio.toFixed(2)}x`
+  if (!factors.length) return base
+  const product =
+    ratio *
+    (cost.tierFactor ?? 1) *
+    (cost.ruleFactors ?? []).reduce((acc, rule) => acc * rule.multiplier, 1)
+  return `${product.toFixed(2)}x = ${ratio.toFixed(2)}${factors.join("")}`
 }
 
 /** Tiny one-line tooltip around an inline element. */
@@ -541,6 +570,21 @@ export const LOG_COLUMNS: LogColumn[] = [
     defaultVisible: true,
     cell: (log, { config }) => (
       <div className="flex items-center justify-end gap-1.5">
+        {isPriorityTier(log) && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span
+                  aria-label="Fast 模式"
+                  className="inline-flex shrink-0 items-center"
+                />
+              }
+            >
+              <ZapIcon className="size-3.5 text-amber-500" strokeWidth={2.25} />
+            </TooltipTrigger>
+            <TooltipContent>Fast 模式</TooltipContent>
+          </Tooltip>
+        )}
         <span className="font-mono text-[13px] font-semibold tabular-nums">
           {formatQuota(log.quota, config)}
         </span>
