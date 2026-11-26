@@ -59,6 +59,7 @@ import {
   groupRatioParts,
   modelPricing,
   PRICE_VARS,
+  requestRuleText,
   tierConditionText,
   type GroupRatioParts,
   type ModelPricing,
@@ -882,7 +883,6 @@ function HourlyStrip({
       {showAxis && (
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>24 小时前</span>
-          <span>按小时成功率 · 悬停查看</span>
           <span>现在</span>
         </div>
       )}
@@ -938,7 +938,9 @@ function ModelDetail({
       {model && catalog && pricing && (
         <div className="flex flex-col gap-6 px-5 pb-6">
           <section className="flex flex-col gap-3">
-            <h3 className="font-medium">全部价格</h3>
+            <div className="flex items-baseline gap-2">
+              <h3 className="font-medium">全部价格</h3>
+            </div>
             {pricing.kind === "custom" ? (
               <>
                 <p className="text-muted-foreground">
@@ -987,11 +989,23 @@ function ModelDetail({
                 )
               })
             )}
-            <p className="text-xs text-muted-foreground">
-              {ratioGroup
-                ? `已按分组「${ratioGroup}」倍率 ${ratioText(groupRatioParts(catalog, ratioGroup), discountName, digits)} 换算。`
-                : `已按分组倍率 ${formatRatio(ratio, digits)} 换算。`}
-            </p>
+            {pricing.kind !== "custom" && pricing.rules.length > 0 && (
+              <div className="flex flex-col rounded-xl bg-popover-inner">
+                <div className="border-b border-divider px-3 py-2 text-xs text-muted-foreground">
+                  请求倍率
+                </div>
+                <dl className="flex flex-col px-3">
+                  <DetailRow label="标准模式" value="×1" />
+                  {pricing.rules.map((rule, index) => (
+                    <DetailRow
+                      key={index}
+                      label={requestRuleText(rule)}
+                      value={`×${rule.multiplier}`}
+                    />
+                  ))}
+                </dl>
+              </div>
+            )}
           </section>
 
           <Separator />

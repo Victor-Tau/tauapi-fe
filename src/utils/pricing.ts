@@ -42,9 +42,18 @@ export interface PriceTier {
   fixed?: number
 }
 
+/** A request-conditional factor: `(param("x") == "y" ? 2 : 1)`. */
+export interface RequestRule {
+  source: 'param' | 'header'
+  key: string
+  op: '==' | '!=' | 'has'
+  value: string | number
+  multiplier: number
+}
+
 export type ModelPricing =
-  | { kind: 'tokens'; tiers: PriceTier[] }
-  | { kind: 'request'; tiers: PriceTier[] }
+  | { kind: 'tokens'; tiers: PriceTier[]; rules: RequestRule[] }
+  | { kind: 'request'; tiers: PriceTier[]; rules: RequestRule[] }
   /** An expression shape this page does not break down; show it verbatim. */
   | { kind: 'custom'; expression: string }
 
@@ -54,7 +63,7 @@ type Token =
   | { type: 'str'; value: string }
   | { type: 'op'; value: string }
 
-const TOKEN = /\s*(?:(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|\.\d+)|([A-Za-z_][A-Za-z0-9_]*)|"((?:[^"\\]|\\.)*)"|(<=|>=|[<>?:(),*+]))/y
+const TOKEN = /\s*(?:(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|\.\d+)|([A-Za-z_][A-Za-z0-9_]*)|"((?:[^"\\]|\\.)*)"|(<=|>=|==|!=|[<>?:(),*+]))/y
 
 function tokenize(source: string): Token[] | null {
   const tokens: Token[] = []
@@ -72,12 +81,19 @@ function tokenize(source: string): Token[] | null {
   return tokens
 }
 
+/** Base tiers of a billing expression (request multipliers not applied). */
+export function parseBillingExpr(expression: string): PriceTier[] | null {
+  return parseBillingExprFull(expression)?.tiers ?? null
+}
+
 /**
  * Parses the display-friendly subset of billing expressions:
  *   [cond ? ] tier("name", p * 2 + c * 10 + …) [: …]   or   tier("name", fixed(x))
+ * optionally parenthesised and multiplied by constants or request rules
+ *   (…) * (param("service_tier") == "priority" ? 2 : 1)
  * Returns null for anything else so callers fall back to the raw expression.
  */
-export function parseBillingExpr(expression: string): PriceTier[] | null {
+export function parseBillingExprFull(expression: string): { tiers: PriceTier[]; rules: RequestRule[] } | null {
   const tokens = tokenize(expression.trim().replace(/^v\d+:/, ''))
   if (!tokens?.length) return null
   let index = 0
@@ -146,9 +162,73 @@ export function parseBillingExpr(expression: string): PriceTier[] | null {
     return [parseTier()]
   }
 
+  function parseRule(): RequestRule {
+    const fn = take()
+    if (fn?.type !== 'id' || (fn.value !== 'param' && fn.value !== 'header')) throw new Error('syntax')
+    expectOp('(')
+    const key = take()
+    if (key?.type !== 'str') throw new Error('syntax')
+    expectOp(')')
+    const op = take()
+    const opValue =
+      op?.type === 'op' && (op.value === '==' || op.value === '!=') ? op.value
+        : op?.type === 'id' && op.value === 'has' ? 'has'
+          : null
+    if (!opValue) throw new Error('syntax')
+    const value = take()
+    if (value?.type !== 'str' && value?.type !== 'num') throw new Error('syntax')
+    expectOp('?')
+    const multiplier = expectNumber()
+    expectOp(':')
+    if (expectNumber() !== 1) throw new Error('syntax')
+    return { source: fn.value, key: key.value, op: opValue, value: value.value, multiplier }
+  }
+
+  /** Scales every price in the tiers by a constant factor. */
+  function scale(tiers: PriceTier[], factor: number) {
+    for (const tier of tiers) {
+      if (tier.fixed !== undefined) tier.fixed *= factor
+      for (const key of Object.keys(tier.prices) as PriceVar[]) tier.prices[key]! *= factor
+    }
+  }
+
+  function parseProduct(): { tiers: PriceTier[]; rules: RequestRule[] } {
+    let tiers: PriceTier[] | null = null
+    const rules: RequestRule[] = []
+    let factor = 1
+    for (;;) {
+      const token = peek()
+      if (token?.type === 'num') {
+        take()
+        factor *= token.value
+      } else if (token?.type === 'op' && token.value === '(') {
+        take()
+        const inner = peek()
+        if (inner?.type === 'id' && (inner.value === 'param' || inner.value === 'header')) {
+          rules.push(parseRule())
+        } else {
+          if (tiers) throw new Error('syntax')
+          const nested = parseProduct()
+          tiers = nested.tiers
+          rules.push(...nested.rules)
+        }
+        expectOp(')')
+      } else {
+        if (tiers) throw new Error('syntax')
+        tiers = parseChain()
+      }
+      const next = peek()
+      if (next?.type === 'op' && next.value === '*') { take(); continue }
+      break
+    }
+    if (!tiers) throw new Error('syntax')
+    if (factor !== 1) scale(tiers, factor)
+    return { tiers, rules }
+  }
+
   try {
-    const tiers = parseChain()
-    return index === tokens.length ? tiers : null
+    const result = parseProduct()
+    return index === tokens.length ? result : null
   } catch {
     return null
   }
@@ -158,18 +238,30 @@ export function parseBillingExpr(expression: string): PriceTier[] | null {
 export function modelPricing(model: PricingModel, config?: SiteStatus): ModelPricing {
   if (model.billing_mode === 'tiered_expr') {
     const expression = model.billing_expr ?? ''
-    const tiers = parseBillingExpr(expression)
-    if (!tiers) return { kind: 'custom', expression }
-    return { kind: tiers.every((tier) => tier.fixed !== undefined) ? 'request' : 'tokens', tiers }
+    const parsed = parseBillingExprFull(expression)
+    if (!parsed) return { kind: 'custom', expression }
+    const { tiers, rules } = parsed
+    return { kind: tiers.every((tier) => tier.fixed !== undefined) ? 'request' : 'tokens', tiers, rules }
   }
-  if (model.quota_type === 1) return { kind: 'request', tiers: [{ prices: {}, fixed: model.model_price }] }
+  if (model.quota_type === 1) return { kind: 'request', tiers: [{ prices: {}, fixed: model.model_price }], rules: [] }
   // Legacy ratio pricing: ModelRatio * 1e6 / QuotaPerUnit is USD per 1M input tokens.
   const quotaPerUnit = config?.quota_per_unit && config.quota_per_unit > 0 ? config.quota_per_unit : 500_000
   const input = (model.model_ratio * 1_000_000) / quotaPerUnit
   const prices: PriceTier['prices'] = { p: input, c: input * model.completion_ratio }
   if (typeof model.cache_ratio === 'number') prices.cr = input * model.cache_ratio
   if (typeof model.create_cache_ratio === 'number') prices.cc = input * model.create_cache_ratio
-  return { kind: 'tokens', tiers: [{ prices }] }
+  return { kind: 'tokens', tiers: [{ prices }], rules: [] }
+}
+
+/** Human label for a request rule's condition, e.g. "FAST模式". */
+export function requestRuleText(rule: RequestRule): string {
+  const value = String(rule.value)
+  if (rule.source === 'param' && rule.key === 'service_tier' && rule.op === '==' && value === 'priority') {
+    return 'FAST模式'
+  }
+  const subject = rule.source === 'param' ? `请求参数 ${rule.key}` : `请求头 ${rule.key}`
+  const verb = rule.op === 'has' ? '包含' : rule.op === '!=' ? '≠' : '='
+  return `${subject} ${verb} ${value}`
 }
 
 /** Lowest ratio among the model's groups, or the chosen group's ratio (upstream behaviour). */

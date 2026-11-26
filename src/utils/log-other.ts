@@ -36,6 +36,8 @@ export interface LogOther {
   expr_b64?: string
   /** Name of the expression tier that applied, e.g. "0_500k". */
   matched_tier?: string
+  /** Request-conditional multipliers of the expression and whether each applied. */
+  request_rules?: { cond: string; multiplier: number; matched: boolean }[]
   /** "token" or a per-request unit. */
   billing_unit?: string
   fixed_price?: number
@@ -115,6 +117,13 @@ export function parseLogOther(raw: string | undefined): LogOther {
   }
   for (const key of BOOLEAN_KEYS) {
     if (parsed[key] === true) other[key] = true
+  }
+  if (Array.isArray(parsed.request_rules)) {
+    other.request_rules = parsed.request_rules.flatMap((rule) =>
+      isRecord(rule) && typeof rule.cond === 'string' && typeof rule.multiplier === 'number' && Number.isFinite(rule.multiplier)
+        ? [{ cond: rule.cond, multiplier: rule.multiplier, matched: rule.matched === true }]
+        : []
+    )
   }
   const billing = parsed.billing_tokens
   if (isRecord(billing)) {
@@ -270,11 +279,16 @@ function tieredCost(log: UsageLog, other: LogOther, ratio: number | undefined): 
   const match = matchedTier(other)
   const perRequest = other.billing_unit != null && other.billing_unit !== 'token'
   if (match?.tier.fixed != null || perRequest) {
-    const callPrice = other.fixed_price ?? match?.tier.fixed
+    const factor = (other.request_rules ?? []).reduce((acc, rule) => (rule.matched ? acc * rule.multiplier : acc), 1)
+    const callPrice = other.fixed_price ?? (match?.tier.fixed != null ? match.tier.fixed * factor : undefined)
     return { ...(callPrice != null ? { callPrice } : {}), ratio, tierLabel: match?.label }
   }
   if (!match) return ratio == null ? null : { ratio }
-  const prices = match.tier.prices
+  // Matched request rules (e.g. service_tier = priority → ×2) scale every price.
+  const factor = (other.request_rules ?? []).reduce((acc, rule) => (rule.matched ? acc * rule.multiplier : acc), 1)
+  const prices = Object.fromEntries(
+    Object.entries(match.tier.prices).map(([key, value]) => [key, value * factor])
+  ) as PriceTier['prices']
   const billed = other.billing_tokens ?? {}
   const tokens = tokenBreakdown(log)
   const perToken = (count: number, price: number | undefined) => (count * (price ?? 0)) / 1_000_000
