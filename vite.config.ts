@@ -46,6 +46,19 @@ export default defineConfig(({ mode }) => {
           secure: !env.API_PROXY_TARGET?.startsWith("https://"),
           timeout: 20_000,
           proxyTimeout: 20_000,
+          // The backend only accepts cookie refresh/logout from its official
+          // origin (SESSION_COOKIE_TRUSTED_URL), so present that origin to it.
+          // Dev server only; never part of the production build.
+          configure: (proxy) => {
+            const origin =
+              env.API_PROXY_ORIGIN || "https://api.mltvrsai.com"
+            proxy.on("proxyReq", (proxyReq) => {
+              proxyReq.setHeader("origin", origin)
+              if (proxyReq.getHeader("referer")) {
+                proxyReq.setHeader("referer", `${origin}/`)
+              }
+            })
+          },
         },
       },
     },
