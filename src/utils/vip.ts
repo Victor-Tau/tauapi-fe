@@ -58,11 +58,14 @@ export function formatGrowth(amount: number | undefined): string {
   return amount === undefined || !Number.isFinite(amount) ? '—' : growthFormat.format(amount)
 }
 
-const SOURCE_TITLES: Record<string, string> = { topup: '在线充值', redemption: '兑换码' }
+const SOURCE_TITLES: Record<string, string> = {
+  topup: '在线充值',
+  redemption: '兑换码',
+  admin_adjustment: '管理员调整',
+}
 
-/** "在线充值", "兑换码". */
 export function growthSourceTitle(event: GrowthEvent): string {
-  return SOURCE_TITLES[event.source] ?? '充值'
+  return SOURCE_TITLES[event.source] ?? '成长值变动'
 }
 
 /**

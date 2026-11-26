@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/card"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { useTopUpLink } from "@/hooks/use-queries"
 import { queryKeys } from "@/lib/query"
 import type { SiteStatus } from "@/types/api"
 import { formatQuota } from "@/utils/format"
@@ -23,15 +22,16 @@ import { formatQuota } from "@/utils/format"
 /** Redeeming a code into the balance, plus the admin's top-up link. */
 export function RedeemCard({
   config,
+  topUpLink,
   className,
 }: {
   config: SiteStatus | undefined
+  topUpLink: string | undefined
   className?: string
 }) {
   const queryClient = useQueryClient()
   const [code, setCode] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const topUpLink = useTopUpLink().data
 
   const redeem = useMutation({
     mutationFn: (value: string) => redeemCode(value),

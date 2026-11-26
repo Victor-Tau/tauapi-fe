@@ -45,6 +45,7 @@ import {
   useAllKeys,
   useSelf,
   useSiteStatus,
+  useTopUpInfo,
   useUsageStat,
 } from "@/hooks/use-queries"
 import type { ModelApiToken, SiteStatus } from "@/types/api"
@@ -55,6 +56,7 @@ import { keySpend, recentDays } from "@/utils/wallet"
 
 import { BalanceCard } from "./balance-card"
 import { RedeemCard } from "./redeem-card"
+import { StripeTopUpCard } from "./stripe-top-up-card"
 import { VipCard } from "./vip-card"
 
 /** Keys listed in the spend card; the rest open in a dialog. */
@@ -66,6 +68,7 @@ export default function WalletPage() {
   const queryClient = useQueryClient()
   const self = useSelf()
   const site = useSiteStatus()
+  const topUp = useTopUpInfo()
   const keys = useAllKeys()
   // Ranges end at "now", fixed for the visit and re-anchored on refresh, so
   // every render does not become a new query.
@@ -82,7 +85,7 @@ export default function WalletPage() {
   // The number of days depends on the site status, so wait for it.
   const recent = useUsageStat(recentRange, site.isSuccess)
 
-  const queries = [self, site, keys, today, recent]
+  const queries = [self, site, topUp, keys, today, recent]
   const failing = queries.filter((query) => query.isError)
   // The VIP card reports its own growth failure inline.
   const fetching = queries.some((query) => query.isFetching)
@@ -107,8 +110,10 @@ export default function WalletPage() {
     setNow(new Date())
     void self.refetch()
     void site.refetch()
+    void topUp.refetch()
     void keys.refetch()
     void queryClient.invalidateQueries({ queryKey: queryKeys.growthAll })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topUpOrders })
     void queryClient.invalidateQueries({ queryKey: ["balance-logs"] })
   }
 
@@ -174,7 +179,11 @@ export default function WalletPage() {
               loading={spend.loading}
             />
           </div>
-          <RedeemCard config={config} className="flex-1" />
+          <RedeemCard
+            config={config}
+            topUpLink={topUp.data?.topup_link}
+            className="flex-1"
+          />
         </div>
         <KeySpendCard
           tokens={keys.data}
@@ -183,6 +192,9 @@ export default function WalletPage() {
         />
       </div>
 
+      {topUp.data?.enable_stripe_topup && (
+        <StripeTopUpCard config={config} info={topUp.data} />
+      )}
       {self.isPending ? (
         <Skeleton className="h-64 w-full rounded-3xl bg-card" />
       ) : user ? (

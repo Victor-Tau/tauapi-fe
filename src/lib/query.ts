@@ -27,7 +27,8 @@ apiClient.onIdentityChange(() => {
 export const queryKeys = {
   status: ["status"] as const,
   self: ["self"] as const,
-  topUpLink: ["topup-link"] as const,
+  topUpInfo: ["topup-info"] as const,
+  topUpOrders: ["topup-orders"] as const,
   groups: ["groups"] as const,
   models: ["models"] as const,
   keys: (page: number, pageSize?: number) => ["keys", page, pageSize] as const,

@@ -349,7 +349,7 @@ export function VipCard({ user }: { user: SelfProfile }) {
           会员体系
         </CardTitle>
         <CardDescription>
-          成长值为近 {windowDays} 天累计到账金额（含兑换码）
+          成长值统计近 {windowDays} 天的在线充值、兑换和管理员调整
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">

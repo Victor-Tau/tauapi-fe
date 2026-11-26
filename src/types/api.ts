@@ -64,7 +64,7 @@ export interface GrowthEvent {
   id: number
   quota: number
   amount: number
-  /** "topup" | "redemption" */
+  /** "topup" | "redemption" | "admin_adjustment" */
   source: string
   created_at: number
 }

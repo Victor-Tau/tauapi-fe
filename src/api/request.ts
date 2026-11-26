@@ -156,14 +156,18 @@ export class ApiClient {
       const envelope = isRecord(json) ? json : null
       const serverMessage = typeof envelope?.message === 'string' ? envelope.message : ''
       const code = typeof envelope?.code === 'string' ? envelope.code : undefined
-      if (!response.ok || envelope?.success === false) {
+      const stripePayment = options.method === 'POST' &&
+        (path === '/api/user/stripe/amount' || path === '/api/user/stripe/pay')
+      const stripeError = stripePayment && serverMessage === 'error'
+      if (!response.ok || envelope?.success === false || stripeError) {
         const nested = isRecord(envelope?.error) && typeof envelope.error.message === 'string' ? envelope.error.message : ''
-        const raw = serverMessage || nested
+        const raw = stripeError && typeof envelope?.data === 'string' ? envelope.data : serverMessage || nested
         const key = typeof envelope?.message_key === 'string' ? envelope.message_key : undefined
         const params = isRecord(envelope?.message_params) ? envelope.message_params : undefined
         throw new ApiError(serverErrorMessage({ status: response.status, code, key, params, message: raw }), response.status, code, key ?? raw)
       }
-      if (!envelope || envelope.success !== true) {
+      const stripeSuccess = stripePayment && envelope?.success === undefined && serverMessage === 'success'
+      if (!envelope || (envelope.success !== true && !stripeSuccess)) {
         throw new ApiError('服务器响应缺少有效的 success 字段。', response.status, 'INVALID_RESPONSE')
       }
       return options.envelope ? envelope : (envelope as unknown as Envelope).data

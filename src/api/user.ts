@@ -4,6 +4,7 @@ import { apiClient } from "./request"
 import {
   groupsSchema,
   loginSessionSchema,
+  pageSchema,
   parseData,
   selfGrowthSchema,
   selfSchema,
@@ -20,26 +21,62 @@ export async function getStatus(signal?: AbortSignal) {
   )
 }
 
-/**
- * The admin's "top-up link" (系统设置 → 购买兑换码), where users buy redemption
- * codes. Only http(s) addresses are returned; anything else counts as unset.
- */
-export async function getTopUpLink(signal?: AbortSignal) {
-  const info = await parseData(
-    z.object({ topup_link: z.string().optional().catch(undefined) }),
+const topUpInfoSchema = z.object({
+  topup_link: z.url({ protocol: /^https?$/ }).trim().optional().catch(undefined),
+  enable_stripe_topup: z.boolean().catch(false),
+  stripe_min_topup: z.number().int().nonnegative().catch(0),
+  amount_options: z.array(z.number().int().positive()).catch([]),
+})
+
+export type TopUpInfo = z.infer<typeof topUpInfoSchema>
+
+export async function getTopUpInfo(signal?: AbortSignal) {
+  return parseData(
+    topUpInfoSchema,
     await apiClient.request("/api/user/topup/info", { signal }),
     "充值信息"
   )
-  const link = info.topup_link?.trim()
-  if (!link) return null
-  try {
-    const url = new URL(link)
-    return url.protocol === "http:" || url.protocol === "https:"
-      ? url.href
-      : null
-  } catch {
-    return null
-  }
+}
+
+export async function getStripeQuote(amount: number) {
+  return parseData(
+    z.string().regex(/^\d+\.\d{2}$/).transform(Number).pipe(z.number().positive()),
+    await apiClient.request("/api/user/stripe/amount", {
+      method: "POST",
+      body: { amount },
+    }),
+    "Stripe 报价"
+  )
+}
+
+export async function createStripeCheckout(amount: number) {
+  const result = parseData(
+    z.object({ pay_link: z.url({ protocol: /^https$/ }) }),
+    await apiClient.request("/api/user/stripe/pay", {
+      method: "POST",
+      body: { amount, payment_method: "stripe" },
+    }),
+    "Stripe 收银台"
+  )
+  return result.pay_link
+}
+
+const topUpOrderSchema = z.object({
+  id: z.number().int(),
+  money: z.number(),
+  payment_provider: z.string().optional(),
+  payment_method: z.string(),
+  create_time: z.number().int(),
+  status: z.string(),
+})
+
+export async function getRecentTopUpOrders(signal?: AbortSignal) {
+  const page = parseData(
+    pageSchema(topUpOrderSchema),
+    await apiClient.request("/api/user/topup/self?p=1&page_size=10", { signal }),
+    "充值订单"
+  )
+  return page.items
 }
 
 export async function getSelf(signal?: AbortSignal) {
@@ -138,7 +175,7 @@ export async function updateDisplayName(name: string) {
 
 /**
  * Growth value, effective VIP level and one page of growth records. The
- * server keeps the total itself (top-ups and redemption codes only).
+ * server keeps the total itself, including admin adjustments.
  */
 export async function getSelfGrowth(
   page: number,

@@ -20,7 +20,7 @@ import {
   getSelfGrowth,
   getStatus,
   getUserModels,
-  getTopUpLink,
+  getTopUpInfo,
 } from "@/api/user"
 import {
   isAwaitingCredit,
@@ -55,10 +55,10 @@ export function useSelf() {
   })
 }
 
-export function useTopUpLink() {
+export function useTopUpInfo() {
   return useQuery({
-    queryKey: queryKeys.topUpLink,
-    queryFn: ({ signal }) => getTopUpLink(signal),
+    queryKey: queryKeys.topUpInfo,
+    queryFn: ({ signal }) => getTopUpInfo(signal),
     staleTime: 5 * 60_000,
   })
 }
