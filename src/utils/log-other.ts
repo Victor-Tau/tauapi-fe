@@ -13,6 +13,10 @@ export interface LogOther {
   /** Compact (compressed) request. */
   compact?: boolean
   reasoning_effort?: string
+  /** Requested service tier, e.g. "priority" (Fast mode) or "default". */
+  service_tier?: string
+  /** Codex sub-agent type declared by the client, e.g. "review", "thread_spawn". */
+  subagent_kind?: string
   request_path?: string
   is_model_mapped?: boolean
   upstream_model_name?: string
@@ -95,6 +99,7 @@ const NUMBER_KEYS = [
 const STRING_KEYS = [
   'reasoning_effort', 'request_path', 'upstream_model_name', 'billing_source', 'subscription_plan_title',
   'usage_semantic', 'billing_mode', 'expr_b64', 'matched_tier', 'billing_unit', 'error_type', 'error_code',
+  'service_tier', 'subagent_kind',
 ] as const
 const BOOLEAN_KEYS = ['ws', 'is_model_mapped', 'claude', 'compact'] as const
 
@@ -164,12 +169,20 @@ export function isWebSearch(log: UsageLog): boolean {
 }
 
 /**
- * Fast mode: a matched request rule of the billing expression tests
- * `param("service_tier")` for "fast" or "priority", e.g.
- * `param("service_tier") == "priority"`.
+ * Fast mode: the logged `service_tier` is "priority" or "fast". Older logs
+ * lack the field; then a matched request rule testing
+ * `param("service_tier")` for "fast" or "priority" decides.
  */
 export function isPriorityTier(log: UsageLog): boolean {
+  const tier = log.other?.service_tier
+  if (tier) return /^(priority|fast)$/i.test(tier)
   return (log.other?.request_rules ?? []).some((rule) => rule.matched && isFastRule(rule))
+}
+
+/** List label of a sub-agent request, e.g. "Review子代理" for review, or null. */
+export function subagentLabel(log: UsageLog): string | null {
+  const kind = log.other?.subagent_kind
+  return kind ? `${kind.charAt(0).toUpperCase()}${kind.slice(1)}子代理` : null
 }
 
 /** Time to first token in ms, only for streamed calls that recorded it. */

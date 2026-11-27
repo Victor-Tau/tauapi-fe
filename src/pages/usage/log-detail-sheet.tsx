@@ -124,6 +124,12 @@ export function LogDetailSheet({
                 ],
                 ["推理强度", other.reasoning_effort],
                 [
+                  "子代理",
+                  other.subagent_kind && (
+                    <span className="font-mono">{other.subagent_kind}</span>
+                  ),
+                ],
+                [
                   "端点",
                   other.request_path && (
                     <span className="font-mono">{other.request_path}</span>

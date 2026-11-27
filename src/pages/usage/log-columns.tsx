@@ -3,6 +3,7 @@ import { format } from "date-fns"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  BotIcon,
   Columns3Icon,
   Minimize2Icon,
   DatabaseIcon,
@@ -49,6 +50,7 @@ import {
   firstTokenTone,
   isPriorityTier,
   isWebSearch,
+  subagentLabel,
   tokenBreakdown,
   type CostBreakdown,
   type Tone,
@@ -454,12 +456,25 @@ export const LOG_COLUMNS: LogColumn[] = [
     id: "effort",
     label: "推理强度",
     defaultVisible: true,
-    cell: (log) =>
-      log.other?.reasoning_effort ? (
-        <span className="font-medium">{log.other.reasoning_effort}</span>
-      ) : (
-        muted
-      ),
+    cell: (log) => {
+      const subagent = subagentLabel(log)
+      const effort = log.other?.reasoning_effort
+      if (!effort && !subagent) return muted
+      return (
+        <span className="inline-flex items-center gap-1.5">
+          {effort ? <span className="font-medium">{effort}</span> : muted}
+          {subagent && (
+            <MiniTip label={subagent} className="inline-flex">
+              <BotIcon
+                className="size-3.5 shrink-0 text-violet-600"
+                strokeWidth={2.25}
+                aria-label={subagent}
+              />
+            </MiniTip>
+          )}
+        </span>
+      )
+    },
   },
   {
     id: "path",
