@@ -674,6 +674,80 @@ export const LOG_COLUMNS: LogColumn[] = [
   },
 ]
 
+/** Log type of failed attempts (`LogTypeError`). */
+export const ERROR_LOG_TYPE = 5
+
+export function isErrorLog(log: UsageLog): boolean {
+  return log.type === ERROR_LOG_TYPE
+}
+
+function sharedColumn(id: string): LogColumn {
+  return LOG_COLUMNS.find((column) => column.id === id)!
+}
+
+/**
+ * Columns of the failed-records view. Failed attempts carry no tokens or
+ * cost, so those give way to the status and the error message.
+ */
+export const ERROR_COLUMNS: LogColumn[] = [
+  sharedColumn("token"),
+  sharedColumn("group"),
+  sharedColumn("model"),
+  sharedColumn("path"),
+  {
+    id: "status",
+    label: "状态",
+    defaultVisible: true,
+    cell: (log) => {
+      const code = log.other?.status_code
+      const errorCode = log.other?.error_code
+      return (
+        <div className="flex items-center gap-1.5">
+          <Badge variant="danger" className="font-mono">
+            {code ? code : "失败"}
+          </Badge>
+          {errorCode && (
+            <span className="font-mono text-xs text-muted-foreground">
+              {errorCode}
+            </span>
+          )}
+        </div>
+      )
+    },
+  },
+  {
+    id: "error",
+    label: "错误信息",
+    defaultVisible: true,
+    cell: (log) =>
+      log.content ? (
+        <span
+          className="block max-w-80 truncate text-[13px] text-muted-foreground"
+          title={log.content}
+        >
+          {log.content}
+        </span>
+      ) : (
+        muted
+      ),
+  },
+  {
+    id: "duration",
+    label: "耗时",
+    align: "right",
+    defaultVisible: true,
+    cell: (log) =>
+      log.use_time != null ? (
+        <span className="font-mono text-[13px] font-semibold tabular-nums">
+          {formatSeconds(log.use_time)}
+        </span>
+      ) : (
+        muted
+      ),
+  },
+  sharedColumn("time"),
+]
+
 /** Fixed last column; not part of the column settings. */
 export function ViewButton({
   log,

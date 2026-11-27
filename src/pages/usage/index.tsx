@@ -18,7 +18,9 @@ import { TimeRangePicker } from "@/components/time-range-picker"
 import { Button } from "@/components/ui/button"
 import {
   Card,
+  CardAction,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -49,6 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Table,
   TableBody,
@@ -73,6 +76,8 @@ import { resolveRange, type TimeRange } from "@/utils/time-range"
 
 import {
   ColumnSettings,
+  ERROR_COLUMNS,
+  ERROR_LOG_TYPE,
   useVisibleColumns,
   ViewButton,
   type CellContext,
@@ -89,6 +94,13 @@ const PAGE_SIZES = [10, 20, 50, 100].map((size) => ({
 const FILTER_WIDTH = "w-full sm:w-44"
 /** Typing in a text filter waits this long before querying. */
 const TYPING_DELAY_MS = 400
+
+/** Success records are consumption logs (type 2), failures error logs (type 5). */
+type View = "success" | "failed"
+const VIEWS: { value: View; label: string }[] = [
+  { value: "success", label: "成功" },
+  { value: "failed", label: "失败" },
+]
 
 const captionDate = new Intl.DateTimeFormat("zh-CN", {
   month: "short",
@@ -116,6 +128,8 @@ export default function UsagePage() {
   const [bounds, setBounds] = useState(() => resolveRange(DEFAULT_RANGE)!)
   const [model, setModel] = useState("")
   const [keyName, setKeyName] = useState("")
+  const [view, setView] = useState<View>("success")
+  const failedView = view === "failed"
   const typedModel = useDebounced(model.trim(), TYPING_DELAY_MS)
   const keyNames = useKeyNames()
   const modelOptions = models.data ?? []
@@ -132,17 +146,23 @@ export default function UsagePage() {
     [bounds, appliedModel, keyName]
   )
 
+  // The list follows the view; the figures above always describe successes.
+  const listFilters = useMemo<UsageLogFilters>(
+    () => (failedView ? { ...filters, type: ERROR_LOG_TYPE } : filters),
+    [filters, failedView]
+  )
+
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(LOGS_PAGE_SIZE)
-  // Any change of filters or page size starts again from the first page.
-  const filterKey = `${JSON.stringify(filters)}|${pageSize}`
+  // Any change of filters, view or page size starts again from the first page.
+  const filterKey = `${JSON.stringify(listFilters)}|${pageSize}`
   const [lastFilterKey, setLastFilterKey] = useState(filterKey)
   if (lastFilterKey !== filterKey) {
     setLastFilterKey(filterKey)
     setPage(1)
   }
 
-  const logs = useLogs({ ...filters, p: page, page_size: pageSize })
+  const logs = useLogs({ ...listFilters, p: page, page_size: pageSize })
   const rowsKey = useSettledKey(`${filterKey}|${page}`, !logs.isPlaceholderData)
   const stat = useUsageStat(filters)
   // No endpoint returns period token totals, so they are summed from the
@@ -152,7 +172,13 @@ export default function UsagePage() {
   // The applied period, shown under the figures it applies to.
   const period = `${captionDate.format(bounds.start_timestamp * 1000)} — ${captionDate.format(bounds.end_timestamp * 1000)}`
   const partial = sums?.complete === false
-  const { columns, visible, toggle, reset: resetColumns } = useVisibleColumns()
+  const {
+    columns: successColumns,
+    visible,
+    toggle,
+    reset: resetColumns,
+  } = useVisibleColumns()
+  const columns = failedView ? ERROR_COLUMNS : successColumns
 
   const [detail, setDetail] = useState<{ log: UsageLog; open: boolean } | null>(
     null
@@ -267,6 +293,31 @@ export default function UsagePage() {
       <Card>
         <CardHeader>
           <CardTitle>调用明细</CardTitle>
+          {failedView && (
+            <CardDescription>
+              失败按每次尝试记录：自动重试后成功的请求，其失败的尝试也会出现在这里。
+            </CardDescription>
+          )}
+          <CardAction>
+            <ToggleGroup
+              variant="outline"
+              size="sm"
+              spacing={0}
+              value={[view]}
+              onValueChange={(value) => {
+                if (value[0] === "success" || value[0] === "failed") {
+                  setView(value[0])
+                }
+              }}
+              aria-label="记录类型"
+            >
+              {VIEWS.map((item) => (
+                <ToggleGroupItem key={item.value} value={item.value}>
+                  {item.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {/* One row: filters on the left (same width), actions on the
@@ -363,11 +414,13 @@ export default function UsagePage() {
                 label="刷新"
                 onRefresh={refresh}
               />
-              <ColumnSettings
-                visible={visible}
-                onToggle={toggle}
-                onReset={resetColumns}
-              />
+              {!failedView && (
+                <ColumnSettings
+                  visible={visible}
+                  onToggle={toggle}
+                  onReset={resetColumns}
+                />
+              )}
             </div>
           </div>
 
@@ -443,7 +496,11 @@ export default function UsagePage() {
                 <EmptyMedia variant="icon">
                   <SearchXIcon />
                 </EmptyMedia>
-                <EmptyTitle>这个范围里，还没有调用记录</EmptyTitle>
+                <EmptyTitle>
+                  {failedView
+                    ? "这个范围里，没有失败的调用"
+                    : "这个范围里，还没有调用记录"}
+                </EmptyTitle>
                 <EmptyDescription>
                   尝试调整时间范围、模型或密钥名称，也可以稍后再来查看。
                 </EmptyDescription>

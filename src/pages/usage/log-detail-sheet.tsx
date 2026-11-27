@@ -19,6 +19,7 @@ import {
   billingSourceLabel,
   type DetailRow,
   formatLogTime,
+  isErrorLog,
   ROW_TONE,
   tokenRows,
 } from "./log-columns"
@@ -84,6 +85,7 @@ export function LogDetailSheet({
   const ttft = log ? firstTokenMs(log) : null
   const tps = log ? outputTokensPerSecond(log) : null
   const stream = other.stream_status
+  const failed = log ? isErrorLog(log) : false
 
   return (
     <Sheet
@@ -131,14 +133,45 @@ export function LogDetailSheet({
                 ["IP", log.ip && <span className="font-mono">{log.ip}</span>],
               ]}
             />
-            <Section title="Token 明细" rows={tokenRows(log).map(toRow)} />
-            <Section
-              title="计费明细"
-              rows={[
-                ...billingRows(log, config).map(toRow),
-                ["扣费来源", billingSourceLabel(log)],
-              ]}
-            />
+            {failed ? (
+              <Section
+                title="失败信息"
+                rows={[
+                  [
+                    "状态码",
+                    other.status_code != null && (
+                      <span className="font-mono text-destructive">
+                        {other.status_code}
+                      </span>
+                    ),
+                  ],
+                  [
+                    "错误类型",
+                    other.error_type && (
+                      <span className="font-mono">{other.error_type}</span>
+                    ),
+                  ],
+                  [
+                    "错误代码",
+                    other.error_code && (
+                      <span className="font-mono">{other.error_code}</span>
+                    ),
+                  ],
+                  ["费用", "未扣费"],
+                ]}
+              />
+            ) : (
+              <>
+                <Section title="Token 明细" rows={tokenRows(log).map(toRow)} />
+                <Section
+                  title="计费明细"
+                  rows={[
+                    ...billingRows(log, config).map(toRow),
+                    ["扣费来源", billingSourceLabel(log)],
+                  ]}
+                />
+              </>
+            )}
             <Section
               title="性能"
               rows={[
@@ -173,7 +206,7 @@ export function LogDetailSheet({
             />
             {log.content && (
               <section className="flex flex-col gap-2">
-                <h3 className="font-medium">说明</h3>
+                <h3 className="font-medium">{failed ? "错误信息" : "说明"}</h3>
                 <p className="rounded-lg bg-muted/50 p-3 text-xs break-all whitespace-pre-wrap text-muted-foreground">
                   {log.content}
                 </p>

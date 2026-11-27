@@ -60,6 +60,12 @@ export interface LogOther {
   content_parts?: LogMessage[]
   /** Operation descriptor of admin actions, e.g. user.quota_add. */
   op?: LogMessage
+  /** Error logs (type 5): HTTP status returned for the failed attempt. */
+  status_code?: number
+  /** Error logs (type 5): error family, e.g. "upstream_error". */
+  error_type?: string
+  /** Error logs (type 5): machine-readable error code. */
+  error_code?: string
   stream_status?: {
     status?: string
     end_reason?: string
@@ -84,11 +90,11 @@ const NUMBER_KEYS = [
   'cache_creation_tokens_12h', 'cache_write_tokens', 'cache_creation_ratio', 'cache_creation_ratio_5m',
   'cache_creation_ratio_1h', 'cache_creation_ratio_12h', 'fixed_price',
   'model_ratio', 'completion_ratio', 'cache_ratio', 'group_ratio', 'user_group_ratio', 'model_price',
-  'referral_rebate_quota', 'invitation_reward_quota',
+  'referral_rebate_quota', 'invitation_reward_quota', 'status_code',
 ] as const
 const STRING_KEYS = [
   'reasoning_effort', 'request_path', 'upstream_model_name', 'billing_source', 'subscription_plan_title',
-  'usage_semantic', 'billing_mode', 'expr_b64', 'matched_tier', 'billing_unit',
+  'usage_semantic', 'billing_mode', 'expr_b64', 'matched_tier', 'billing_unit', 'error_type', 'error_code',
 ] as const
 const BOOLEAN_KEYS = ['ws', 'is_model_mapped', 'claude', 'compact'] as const
 
