@@ -917,13 +917,6 @@ function ModelDetail({
     model && catalog ? displayGroupRatio(model, catalog.group_ratio, group) : 1
   const digits = useContext(RatioDigitsContext)
   const pricing = model ? modelPricing(model, config) : null
-  const ratioGroup =
-    model && catalog
-      ? (group ??
-        model.enable_groups.find(
-          (name) => (catalog.group_ratio[name] ?? 1) === ratio
-        ))
-      : undefined
   const health = healthOf(perf?.success_rate)
 
   return (
